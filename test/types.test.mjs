@@ -43,6 +43,13 @@ test("normalizeJob: 缺欄位不炸，回空字串/空陣列", () => {
   assert.equal(job.jobName, "");
   assert.equal(job.companyName, "");
   assert.deepEqual(job.skills, []);
+  assert.equal(job.featured, false); // 沒 jobType 視為一般
+});
+
+test("normalizeJob: featured 只認 jobType=1（廣告）；0 一般、2 優先位都算有效結果", () => {
+  assert.equal(normalizeJob({ jobType: 0 }).featured, false); // 一般
+  assert.equal(normalizeJob({ jobType: 1 }).featured, true); // 廣告（無視關鍵字）
+  assert.equal(normalizeJob({ jobType: 2 }).featured, false); // 優先位，仍符合關鍵字 → 保留分析
 });
 
 test("normalizeJobDetail: 語言能力格式化", () => {

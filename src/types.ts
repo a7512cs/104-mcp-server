@@ -11,9 +11,10 @@ export interface Job {
   readonly area: string;
   readonly salary: string;
   readonly skills: readonly string[];
-  readonly description: string;
   readonly url: string;
   readonly appearDate: string;
+  /** 是否為 104 廣告位（jobType=1，會無視關鍵字硬塞在最前面）。優先位(2)不算，仍是有效結果 */
+  readonly featured: boolean;
 }
 
 /** 104 原始職缺（只列我們會用到的欄位，其餘忽略） */
@@ -24,11 +25,11 @@ interface RawJob {
   jobAddrNoDesc?: string;
   salaryLow?: number;
   salaryHigh?: number;
-  descSnippet?: string;
-  description?: string;
   pcSkills?: { description?: string }[];
   link?: { job?: string };
   appearDate?: string;
+  /** 0=一般自然結果；1=精選/廣告（會無視關鍵字硬塞在最前面）；2=付費優先位 */
+  jobType?: number;
 }
 
 export const NEGOTIABLE = "面議";
@@ -51,11 +52,12 @@ function stripHighlight(text: string): string {
 }
 
 /**
- * 把一筆 104 原始職缺轉成乾淨的 Job。
+ * 把一筆 104 原始職缺轉成乾淨的 Job（精簡列表用）。
+ * 刻意不含完整 JD —— 搜尋是概覽，完整內容用 get_job_detail 拿。
+ * 列表越精簡，模型整理成清單時越不會把某筆的網址對錯到別筆。
  * ⚠️ 這是「防腐層」—— 104 改版時的唯一修改點。
  */
 export function normalizeJob(raw: RawJob): Job {
-  const rawDesc = raw.description ?? raw.descSnippet ?? "";
   return {
     jobId: raw.jobNo ?? "",
     jobName: stripHighlight(raw.jobName ?? ""),
@@ -63,9 +65,10 @@ export function normalizeJob(raw: RawJob): Job {
     area: raw.jobAddrNoDesc ?? "",
     salary: formatSalary(raw.salaryLow, raw.salaryHigh),
     skills: (raw.pcSkills ?? []).map((s) => s.description ?? "").filter(Boolean),
-    description: stripHighlight(rawDesc),
     url: raw.link?.job ?? "",
     appearDate: raw.appearDate ?? "",
+    // 只有 jobType=1 是會無視關鍵字硬塞的廣告；0(一般)和 2(優先位) 都是有效結果，一起分析
+    featured: raw.jobType === 1,
   };
 }
 

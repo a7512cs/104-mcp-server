@@ -30,6 +30,12 @@ export function registerSearchJobs(server: McpServer): void {
           .boolean()
           .optional()
           .describe("排除「面議」（沒寫薪資）的職缺，預設 false。想只看有明確薪資時設 true"),
+        excludeFeatured: z
+          .boolean()
+          .optional()
+          .describe(
+            "排除 104 付費推廣/廣告職缺（結果中 featured=true 的），預設 false。這些會被 104 硬塞在最前面、常不符合搜尋條件；想只看自然結果時設 true",
+          ),
         jobCategory: z
           .string()
           .optional()

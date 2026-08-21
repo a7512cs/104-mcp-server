@@ -88,6 +88,8 @@ export interface SearchParams {
   readonly salaryMin?: number;
   /** 排除「面議」職缺。預設 false */
   readonly excludeNegotiable?: boolean;
+  /** 排除 104 付費推廣/廣告位（jobType≠0）。預設 false */
+  readonly excludeFeatured?: boolean;
   /** 職務類別名稱，例如 '軟體工程師'（會解析成官方代碼查詢） */
   readonly jobCategory?: string;
   /** 遠端工作：full 完全遠端 / partial 部分遠端 / any 皆可 */
@@ -109,8 +111,10 @@ export interface SearchResult {
 
 /** 依關鍵字 + 篩選條件搜尋職缺 */
 export async function searchJobs(params: SearchParams): Promise<SearchResult> {
-  const { keyword, area, salaryMin, excludeNegotiable, jobCategory, remote, jobType, experience, page, limit } =
-    params;
+  const {
+    keyword, area, salaryMin, excludeNegotiable, excludeFeatured,
+    jobCategory, remote, jobType, experience, page, limit,
+  } = params;
 
   // 地區、職類：名稱 → 官方代碼（抓不到就回空陣列，退回 client 端子字串過濾）
   const [areaCodes, jobCatCodes] = await Promise.all([
@@ -138,7 +142,7 @@ export async function searchJobs(params: SearchParams): Promise<SearchResult> {
 
   // 正規化 → client 端過濾（地區 + 排除面議）
   const normalized = rawJobs.map((raw) => normalizeJob(raw as never));
-  const filtered = filterJobs(normalized, { area, excludeNegotiable });
+  const filtered = filterJobs(normalized, { area, excludeNegotiable, excludeFeatured });
 
   return {
     total: pagination?.total ?? filtered.length,

@@ -83,10 +83,10 @@ export function extractCompanyCode(input: string): string {
   return (match ? match[1] : input).trim();
 }
 
-/** 套用 client 端過濾：地區子字串 + 排除面議 */
+/** 套用 client 端過濾：地區子字串 + 排除面議 + 排除廣告 */
 export function filterJobs(
   jobs: readonly Job[],
-  opts: { area?: string; excludeNegotiable?: boolean },
+  opts: { area?: string; excludeNegotiable?: boolean; excludeFeatured?: boolean },
 ): Job[] {
   let result = [...jobs];
   if (opts.area) {
@@ -96,6 +96,10 @@ export function filterJobs(
   // 且最上方常有不受篩選的推薦職缺漏進來，這裡再保險一次。
   if (opts.excludeNegotiable) {
     result = result.filter((job) => job.salary !== NEGOTIABLE);
+  }
+  // 排除 104 付費推廣位（jobType≠0）—— 這些會無視關鍵字硬塞在最前面
+  if (opts.excludeFeatured) {
+    result = result.filter((job) => !job.featured);
   }
   return result;
 }

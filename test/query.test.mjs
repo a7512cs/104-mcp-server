@@ -79,7 +79,7 @@ test("extractCompanyCode: 完整網址 / 帶 query / 裸代碼", () => {
   assert.equal(extractCompanyCode(" 1a2x6blghh "), "1a2x6blghh");
 });
 
-const mk = (over) => ({ jobId: "1", jobName: "x", companyName: "c", area: "台北市信義區", salary: "月薪 60,000 元以上", skills: [], description: "", url: "", appearDate: "", ...over });
+const mk = (over) => ({ jobId: "1", jobName: "x", companyName: "c", area: "台北市信義區", salary: "月薪 60,000 元以上", skills: [], url: "", appearDate: "", featured: false, ...over });
 
 test("filterJobs: 地區子字串比對", () => {
   const r = filterJobs([mk({ area: "台北市信義區" }), mk({ area: "新竹市東區" })], { area: "新竹" });
@@ -90,6 +90,12 @@ test("filterJobs: 地區子字串比對", () => {
 test("filterJobs: excludeNegotiable 濾掉面議", () => {
   const r = filterJobs([mk({ salary: "面議" }), mk({ salary: "月薪 60,000 元以上" })], { excludeNegotiable: true });
   assert.equal(r.length, 1);
+});
+
+test("filterJobs: excludeFeatured 濾掉廣告位（featured=true）", () => {
+  const r = filterJobs([mk({ featured: true }), mk({ featured: false })], { excludeFeatured: true });
+  assert.equal(r.length, 1);
+  assert.equal(r[0].featured, false);
 });
 
 test("filterJobs: 不設條件 → 回新陣列（不可變）", () => {
