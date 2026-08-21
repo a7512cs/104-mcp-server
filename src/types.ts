@@ -12,6 +12,7 @@ export interface Job {
   readonly companyUrl: string;
   readonly area: string;
   readonly salary: string;
+  /** 擅長工具/語言（具體技術，如 C++、Linux）。跨工具語意一致：詳情的 skills 也是這個 */
   readonly skills: readonly string[];
   readonly url: string;
   readonly appearDate: string;
@@ -91,8 +92,10 @@ export interface JobDetail {
   readonly categories: readonly string[];
   readonly workExp: string;
   readonly education: string;
+  /** 擅長工具/語言（具體技術，如 C++、Linux）—— 跟 search_jobs 的 skills 同一種東西 */
   readonly skills: readonly string[];
-  readonly specialties: readonly string[];
+  /** 職務技能（職類層級描述，如「軟體工程系統開發」）—— 跟 skills 不同層級 */
+  readonly jobSkills: readonly string[];
   readonly languages: readonly string[];
   readonly headcount: string;
   readonly manageResp: string;
@@ -180,8 +183,9 @@ export function normalizeJobDetail(raw: RawJobDetail): JobDetail {
     categories: descriptions(jd.jobCategory),
     workExp: cond.workExp ?? "",
     education: cond.edu ?? "",
-    skills: descriptions(cond.skill),
-    specialties: descriptions(cond.specialty),
+    // skills = 擅長工具/語言（跟 search 的 skills 一致），jobSkills = 職務技能（職類層級）
+    skills: descriptions(cond.specialty),
+    jobSkills: descriptions(cond.skill),
     languages: formatLanguages(cond.language),
     headcount: jd.needEmp ?? "",
     manageResp: jd.manageResp ?? "",

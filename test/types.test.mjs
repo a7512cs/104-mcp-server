@@ -70,13 +70,17 @@ test("normalizeJobDetail: companyUrl 取自 header.custUrl", () => {
   assert.equal(d.companyUrl, "https://www.104.com.tw/company/xyz99");
 });
 
-test("normalizeJobDetail: 技能/職類抽 description", () => {
+test("normalizeJobDetail: skills=擅長工具(specialty) / jobSkills=職務技能(skill)，語意跟 search 一致", () => {
   const d = normalizeJobDetail({
     jobDetail: { jobCategory: [{ code: "1", description: "軟體工程師" }] },
-    condition: { specialty: [{ description: "Linux" }, { description: "C++" }] },
+    condition: {
+      specialty: [{ description: "Linux" }, { description: "C++" }], // 擅長工具
+      skill: [{ description: "軟體工程系統開發" }], // 職務技能（職類層級）
+    },
   });
   assert.deepEqual(d.categories, ["軟體工程師"]);
-  assert.deepEqual(d.specialties, ["Linux", "C++"]);
+  assert.deepEqual(d.skills, ["Linux", "C++"]); // 跟 search_jobs 的 skills 同一種東西
+  assert.deepEqual(d.jobSkills, ["軟體工程系統開發"]);
 });
 
 test("normalizeJobDetail: 福利標籤直接帶出", () => {
