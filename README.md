@@ -159,9 +159,3 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 
 1. **stdout 是協議專用管線。** stdio 模式下用 `console.log` 會污染 JSON-RPC 訊息，直接斷線。log 一律走 `stderr`。
 2. **`description` 是模型唯一的判斷依據。** 模型靠它決定要不要呼叫 tool，寫清楚比寫漂亮重要。
-
-## 下一步
-
-1. 簡單快取（同關鍵字短時間重複問直接回快取，少打 104）
-2. 薪資統計（抓一批算中位數/分布，回答「行情多少」）
-3. Prompt 範本：`/analyze-jd` 一鍵分析 JD 適不適合我
