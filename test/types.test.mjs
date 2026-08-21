@@ -33,10 +33,15 @@ test("normalizeJob: pcSkills → skills 陣列，過濾空值", () => {
   assert.deepEqual(job.skills, ["Python", "Git"]);
 });
 
-test("normalizeJob: url 取自 link.job、companyUrl 取自 link.cust", () => {
-  const job = normalizeJob({ link: { job: "https://www.104.com.tw/job/abc12", cust: "https://www.104.com.tw/company/xyz99" } });
+test("normalizeJob: jobId=slug（非數字 jobNo）、url、companyUrl 都取自 link", () => {
+  const job = normalizeJob({ jobNo: "13191931", link: { job: "https://www.104.com.tw/job/abc12", cust: "https://www.104.com.tw/company/xyz99" } });
+  assert.equal(job.jobId, "abc12"); // slug，不是數字 13191931 —— 可直接餵給 get_job_detail
   assert.equal(job.url, "https://www.104.com.tw/job/abc12");
-  assert.equal(job.companyUrl, "https://www.104.com.tw/company/xyz99"); // 讓搜尋結果能接到 get_company_jobs
+  assert.equal(job.companyUrl, "https://www.104.com.tw/company/xyz99");
+});
+
+test("normalizeJob: 沒有 link 時 jobId 退回 jobNo", () => {
+  assert.equal(normalizeJob({ jobNo: "999" }).jobId, "999");
 });
 
 test("normalizeJob: 缺欄位不炸，回空字串/空陣列", () => {
@@ -60,9 +65,20 @@ test("normalizeJobDetail: 語言能力格式化", () => {
   assert.deepEqual(d.languages, ["英文 (聽:中等 說:中等 讀:略懂 寫:略懂)"]);
 });
 
-test("normalizeJobDetail: 地點 = region + detail", () => {
+test("normalizeJobDetail: area=區級、location=區+街道（兩個都給）", () => {
   const d = normalizeJobDetail({ jobDetail: { addressRegion: "新北市新店區", addressDetail: "寶高路26號" } });
-  assert.equal(d.location, "新北市新店區 寶高路26號");
+  assert.equal(d.area, "新北市新店區"); // 跟 search / company 的 area 一致
+  assert.equal(d.location, "新北市新店區 寶高路26號"); // 更詳細
+});
+
+test("normalizeJobDetail: experience 取自 workExp（跟 company 的 experience 同名）", () => {
+  assert.equal(normalizeJobDetail({ condition: { workExp: "3年以上" } }).experience, "3年以上");
+});
+
+test("normalizeJobDetail: ref 帶入 jobId(slug) 與 url，跟其他工具一致", () => {
+  const d = normalizeJobDetail({ header: { jobName: "x" } }, { jobId: "7uqyj", url: "https://www.104.com.tw/job/7uqyj" });
+  assert.equal(d.jobId, "7uqyj");
+  assert.equal(d.url, "https://www.104.com.tw/job/7uqyj");
 });
 
 test("normalizeJobDetail: companyUrl 取自 header.custUrl", () => {

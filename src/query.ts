@@ -7,6 +7,9 @@
 import { CONFIG } from "./config.js";
 import { NEGOTIABLE, type Job } from "./types.js";
 
+// slug/公司碼解析移到 slug.ts（types.ts 也要用，抽出來避免重複）。這裡再匯出保持相容。
+export { extractSlug, extractCompanyCode } from "./slug.js";
+
 // ── 友善 enum → 104 代碼對照（都用 metadata.total 實測驗證過）───────
 
 /** 遠端工作：完全遠端 / 部分遠端 / 兩者皆可 */
@@ -63,24 +66,6 @@ export function buildSearchUrl(q: SearchQuery): string {
   if (q.experience) params.set("jobexp", q.experience); // 年資級距
 
   return `${CONFIG.searchApiUrl}?${params.toString()}`;
-}
-
-/**
- * 從輸入取出職缺 slug：吃得下完整網址或裸 slug。
- * 例：https://www.104.com.tw/job/7uqyj?foo=bar → 7uqyj；7uqyj → 7uqyj
- */
-export function extractSlug(input: string): string {
-  const match = input.match(/\/job\/([^/?#]+)/);
-  return (match ? match[1] : input).trim();
-}
-
-/**
- * 從輸入取出公司代碼：吃得下完整公司網址或裸代碼。
- * 例：https://www.104.com.tw/company/1a2x6blghh → 1a2x6blghh
- */
-export function extractCompanyCode(input: string): string {
-  const match = input.match(/\/company\/([^/?#]+)/);
-  return (match ? match[1] : input).trim();
 }
 
 /** 套用 client 端過濾：地區子字串 + 排除面議 + 排除廣告 */

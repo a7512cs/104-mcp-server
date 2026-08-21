@@ -167,7 +167,8 @@ export async function getJobDetail(jobUrlOrSlug: string): Promise<JobDetail> {
   if (typeof data !== "object" || data === null) {
     throw new Error(`找不到職缺 ${slug} 的詳情`);
   }
-  return normalizeJobDetail(data as never);
+  // 補上 jobId(slug) 與 url，讓詳情跟搜尋/公司職缺的欄位一致
+  return normalizeJobDetail(data as never, { jobId: slug, url: referer });
 }
 
 // ── 公司職缺 ──────────────────────────────────────────────────

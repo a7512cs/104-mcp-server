@@ -4,7 +4,10 @@
  * 刻意跟 104 的原始欄位脫鉤：104 改欄位名時，只改 normalizeJob，
  * 這個型別和 tool 都不用動。
  */
+import { extractSlug } from "./slug.js";
+
 export interface Job {
+  /** 職缺代碼（slug，如 7uqyj）—— 可直接餵給 get_job_detail。三個工具語意一致 */
   readonly jobId: string;
   readonly jobName: string;
   readonly companyName: string;
@@ -61,8 +64,10 @@ function stripHighlight(text: string): string {
  * ⚠️ 這是「防腐層」—— 104 改版時的唯一修改點。
  */
 export function normalizeJob(raw: RawJob): Job {
+  // jobId 用 slug（跟 link.job / get_job_detail / 公司職缺一致），不用數字 jobNo
+  const slug = extractSlug(raw.link?.job ?? "");
   return {
-    jobId: raw.jobNo ?? "",
+    jobId: slug || (raw.jobNo ?? ""),
     jobName: stripHighlight(raw.jobName ?? ""),
     companyName: raw.custName ?? "",
     companyUrl: raw.link?.cust ?? "",
@@ -82,15 +87,23 @@ export function normalizeJob(raw: RawJob): Job {
 
 /** 職缺完整詳情的乾淨型別 */
 export interface JobDetail {
+  /** 職缺代碼（slug）—— 跟 search_jobs / get_company_jobs 的 jobId 一致 */
+  readonly jobId: string;
   readonly jobName: string;
   readonly companyName: string;
   /** 公司頁網址，可直接餵給 get_company_jobs 看這家公司所有職缺 */
   readonly companyUrl: string;
+  /** 職缺網址 */
+  readonly url: string;
   readonly salary: string;
+  /** 地區（區級，如「新北市新店區」）—— 跟 search_jobs / get_company_jobs 的 area 一致 */
+  readonly area: string;
+  /** 完整地址（區 + 街道），比 area 更詳細 */
   readonly location: string;
   readonly description: string;
   readonly categories: readonly string[];
-  readonly workExp: string;
+  /** 需求工作經歷 —— 跟 get_company_jobs 的 experience 同名同義 */
+  readonly experience: string;
   readonly education: string;
   /** 擅長工具/語言（具體技術，如 C++、Linux）—— 跟 search_jobs 的 skills 同一種東西 */
   readonly skills: readonly string[];
@@ -167,21 +180,29 @@ function formatLanguages(langs?: LanguageItem[]): string[] {
 
 /**
  * 把 104 原始詳情轉成乾淨的 JobDetail。
+ * ref 帶入這筆職缺的 jobId(slug) 與 url —— 詳情 body 本身沒有，由呼叫端補上，
+ * 讓 jobId/url 跟 search_jobs / get_company_jobs 一致。
  * ⚠️ 跟 normalizeJob 一樣是防腐層，104 改版時的修改點。
  */
-export function normalizeJobDetail(raw: RawJobDetail): JobDetail {
+export function normalizeJobDetail(
+  raw: RawJobDetail,
+  ref: { jobId: string; url: string } = { jobId: "", url: "" },
+): JobDetail {
   const jd = raw.jobDetail ?? {};
   const cond = raw.condition ?? {};
   const location = [jd.addressRegion, jd.addressDetail].filter(Boolean).join(" ");
   return {
+    jobId: ref.jobId,
     jobName: raw.header?.jobName ?? "",
     companyName: raw.header?.custName ?? "",
     companyUrl: raw.header?.custUrl ?? "",
+    url: ref.url,
     salary: jd.salary ?? "",
+    area: jd.addressRegion ?? "",
     location,
     description: (jd.jobDescription ?? "").trim(),
     categories: descriptions(jd.jobCategory),
-    workExp: cond.workExp ?? "",
+    experience: cond.workExp ?? "",
     education: cond.edu ?? "",
     // skills = 擅長工具/語言（跟 search 的 skills 一致），jobSkills = 職務技能（職類層級）
     skills: descriptions(cond.specialty),

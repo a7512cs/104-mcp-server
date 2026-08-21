@@ -60,9 +60,21 @@
 > 5. 地區/職類用**樹狀代碼表 + 剪枝**：命中父節點（如「新竹縣市」）就用父代碼，不展開成一堆子代碼 —— 展開太多會讓 104 回 `400`。
 > 6. **廣告偵測**：104 會在結果最前面塞廣告（原始欄位 `jobType=1`），它會**無視關鍵字**（例如護理師搜尋跑出「COACH 精品銷售」）。每筆回傳 `featured` 旗標標記它，`excludeFeatured=true` 可整批濾掉。`jobType=2`（付費優先位）仍符合關鍵字，視為有效結果不標記。搜尋列表刻意不含完整 JD（精簡、避免模型整理清單時把某筆網址對錯到別筆），完整內容用 `get_job_detail`。
 
-> **`skills` vs `jobSkills`（兩種 104 標籤，別搞混）**：
-> - `skills` = **擅長工具/語言**（具體技術，如 `C++`、`Linux`）。`search_jobs` 和 `get_job_detail` **都用這個名字、都是這個意思**。
-> - `jobSkills` = **職務技能**（職類層級描述，如「軟體工程系統開發」）。只有 `get_job_detail` 有。
+> **欄位命名跨三個工具一致**（都對照 104 原始欄位語意，避免同名不同物）：
+>
+> | 概念 | search_jobs | get_job_detail | get_company_jobs |
+> |------|:-----------:|:--------------:|:----------------:|
+> | 職缺代碼（slug，可餵回 `get_job_detail`）| `jobId` | `jobId` | `jobId` |
+> | 職缺網址 | `url` | `url` | `url` |
+> | 地區（區級）| `area` | `area` | `area` |
+> | 完整地址（區+街道）| — | `location` | — |
+> | 需求年資 | — | `experience` | `experience` |
+> | 擅長工具/語言（C++、Linux）| `skills` | `skills` | — |
+> | 職務技能（職類層級，如「軟體工程系統開發」）| — | `jobSkills` | — |
+> | 公司頁網址（餵給 `get_company_jobs`）| `companyUrl` | `companyUrl` | — |
+> | 是否為廣告位（`jobType=1`）| `featured` | — | — |
+>
+> `jobId` 一律是 **slug**（如 `7uqyj`），不是 104 內部數字 —— slug 才能餵回 `get_job_detail`。`skills` 到哪都是「具體技術」。
 
 ### `get_job_detail` 參數
 
