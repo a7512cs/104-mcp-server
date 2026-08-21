@@ -74,7 +74,16 @@
 | `page` | | 第幾頁（每頁 20 筆），預設 1 |
 | `limit` | | 本頁回傳筆數上限，最多 20，預設 10 |
 
-典型用法：先 `search_jobs` 找職缺 → `url` 餵給 `get_job_detail` 看完整內容 → 或用公司網址餵給 `get_company_jobs` 看該公司所有缺。
+**三個工具怎麼串**：
+- `search_jobs` / `get_job_detail` 每筆都回 `url`（職缺）和 `companyUrl`（公司）兩個網址。
+- 想看某筆職缺完整內容 → 把它的 `url` 餵給 `get_job_detail`。
+- 想看「這家公司還有哪些缺」→ 把 `companyUrl` 餵給 `get_company_jobs`（它是**指定公司**的職缺列表，不是關鍵字搜尋）。
+
+```
+search_jobs ─ url ──────→ get_job_detail
+      │                        │
+      └─ companyUrl ───────────┴──→ get_company_jobs
+```
 
 ## 104 內部 API 參考
 

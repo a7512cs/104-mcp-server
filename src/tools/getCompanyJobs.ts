@@ -11,15 +11,15 @@ export function registerGetCompanyJobs(server: McpServer): void {
   server.registerTool(
     "get_company_jobs",
     {
-      title: "列出公司所有職缺",
+      title: "列出某公司所有職缺",
       description:
-        "列出某家公司在 104 上所有在徵的職缺（職稱、地區、薪資、學經歷要求、網址）。傳入公司網址或代碼，可分頁。公司網址可從 search_jobs 職缺的頁面或 get_job_detail 取得。",
+        "列出「某一家指定公司」在 104 上所有在徵的職缺（職稱、地區、薪資、學經歷要求、網址）。這不是關鍵字搜尋 —— 是拿一家已知公司去看它全部的缺。公司網址請用 search_jobs 或 get_job_detail 回傳的 companyUrl 欄位。可分頁。",
       inputSchema: {
         companyUrlOrId: z
           .string()
           .min(1)
           .describe(
-            "公司網址或代碼，例如 'https://www.104.com.tw/company/1a2x6blghh' 或 '1a2x6blghh'",
+            "公司網址或代碼（用 search_jobs / get_job_detail 回傳的 companyUrl），例如 'https://www.104.com.tw/company/1a2x6blghh' 或 '1a2x6blghh'",
           ),
         page: z
           .number()

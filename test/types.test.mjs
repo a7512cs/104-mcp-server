@@ -33,9 +33,10 @@ test("normalizeJob: pcSkills → skills 陣列，過濾空值", () => {
   assert.deepEqual(job.skills, ["Python", "Git"]);
 });
 
-test("normalizeJob: url 取自 link.job", () => {
-  const job = normalizeJob({ link: { job: "https://www.104.com.tw/job/abc12" } });
+test("normalizeJob: url 取自 link.job、companyUrl 取自 link.cust", () => {
+  const job = normalizeJob({ link: { job: "https://www.104.com.tw/job/abc12", cust: "https://www.104.com.tw/company/xyz99" } });
   assert.equal(job.url, "https://www.104.com.tw/job/abc12");
+  assert.equal(job.companyUrl, "https://www.104.com.tw/company/xyz99"); // 讓搜尋結果能接到 get_company_jobs
 });
 
 test("normalizeJob: 缺欄位不炸，回空字串/空陣列", () => {
@@ -62,6 +63,11 @@ test("normalizeJobDetail: 語言能力格式化", () => {
 test("normalizeJobDetail: 地點 = region + detail", () => {
   const d = normalizeJobDetail({ jobDetail: { addressRegion: "新北市新店區", addressDetail: "寶高路26號" } });
   assert.equal(d.location, "新北市新店區 寶高路26號");
+});
+
+test("normalizeJobDetail: companyUrl 取自 header.custUrl", () => {
+  const d = normalizeJobDetail({ header: { custUrl: "https://www.104.com.tw/company/xyz99" } });
+  assert.equal(d.companyUrl, "https://www.104.com.tw/company/xyz99");
 });
 
 test("normalizeJobDetail: 技能/職類抽 description", () => {

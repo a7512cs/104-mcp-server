@@ -79,7 +79,7 @@ test("extractCompanyCode: 完整網址 / 帶 query / 裸代碼", () => {
   assert.equal(extractCompanyCode(" 1a2x6blghh "), "1a2x6blghh");
 });
 
-const mk = (over) => ({ jobId: "1", jobName: "x", companyName: "c", area: "台北市信義區", salary: "月薪 60,000 元以上", skills: [], url: "", appearDate: "", featured: false, ...over });
+const mk = (over) => ({ jobId: "1", jobName: "x", companyName: "c", companyUrl: "", area: "台北市信義區", salary: "月薪 60,000 元以上", skills: [], url: "", appearDate: "", featured: false, ...over });
 
 test("filterJobs: 地區子字串比對", () => {
   const r = filterJobs([mk({ area: "台北市信義區" }), mk({ area: "新竹市東區" })], { area: "新竹" });

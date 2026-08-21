@@ -8,6 +8,8 @@ export interface Job {
   readonly jobId: string;
   readonly jobName: string;
   readonly companyName: string;
+  /** 公司頁網址，可直接餵給 get_company_jobs 看這家公司所有職缺 */
+  readonly companyUrl: string;
   readonly area: string;
   readonly salary: string;
   readonly skills: readonly string[];
@@ -26,7 +28,7 @@ interface RawJob {
   salaryLow?: number;
   salaryHigh?: number;
   pcSkills?: { description?: string }[];
-  link?: { job?: string };
+  link?: { job?: string; cust?: string };
   appearDate?: string;
   /** 0=一般自然結果；1=精選/廣告（會無視關鍵字硬塞在最前面）；2=付費優先位 */
   jobType?: number;
@@ -62,6 +64,7 @@ export function normalizeJob(raw: RawJob): Job {
     jobId: raw.jobNo ?? "",
     jobName: stripHighlight(raw.jobName ?? ""),
     companyName: raw.custName ?? "",
+    companyUrl: raw.link?.cust ?? "",
     area: raw.jobAddrNoDesc ?? "",
     salary: formatSalary(raw.salaryLow, raw.salaryHigh),
     skills: (raw.pcSkills ?? []).map((s) => s.description ?? "").filter(Boolean),
@@ -80,6 +83,8 @@ export function normalizeJob(raw: RawJob): Job {
 export interface JobDetail {
   readonly jobName: string;
   readonly companyName: string;
+  /** 公司頁網址，可直接餵給 get_company_jobs 看這家公司所有職缺 */
+  readonly companyUrl: string;
   readonly salary: string;
   readonly location: string;
   readonly description: string;
@@ -113,7 +118,7 @@ interface LanguageItem {
 
 /** 104 詳情原始結構（只列會用到的欄位） */
 interface RawJobDetail {
-  header?: { jobName?: string; custName?: string };
+  header?: { jobName?: string; custName?: string; custUrl?: string };
   jobDetail?: {
     jobDescription?: string;
     salary?: string;
@@ -168,6 +173,7 @@ export function normalizeJobDetail(raw: RawJobDetail): JobDetail {
   return {
     jobName: raw.header?.jobName ?? "",
     companyName: raw.header?.custName ?? "",
+    companyUrl: raw.header?.custUrl ?? "",
     salary: jd.salary ?? "",
     location,
     description: (jd.jobDescription ?? "").trim(),
