@@ -1,0 +1,24 @@
+{
+  "name": "mcp-server-104",
+  "version": "0.1.0",
+  "description": "MCP server for 104 job bank (Taiwan)",
+  "type": "module",
+  "bin": {
+    "mcp-server-104": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
+    "test": "npm run build && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "cycletls": "^2.0.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.0.0"
+  }
+}
