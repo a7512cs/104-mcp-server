@@ -44,15 +44,16 @@ const MAX_MATCHES = 30;
  * —— 因為父節點（例如「新竹縣市」）本身就涵蓋所有子區，
  * 展開成一堆子代碼反而會讓 104 回 400（代碼數量有上限）。
  * 太模糊（>30 筆）就放棄，回空陣列讓上層改用 client 端子字串過濾。
+ * 回傳 code+name（名稱給同名多區的確認訊息用）。
  */
-export function matchCodes(nodes: CodeNode[], query: string): string[] {
+export function matchCodes(nodes: CodeNode[], query: string): FlatCode[] {
   const q = query.trim();
   if (!q) return [];
-  const out: string[] = [];
+  const out: FlatCode[] = [];
   const walk = (list: CodeNode[]) => {
     for (const node of list) {
       if (node.des?.includes(q)) {
-        if (node.no) out.push(node.no); // 命中 → 收代碼、剪枝（不進子節點）
+        if (node.no) out.push({ code: node.no, name: node.des }); // 命中 → 收代碼、剪枝（不進子節點）
       } else if (node.n?.length) {
         walk(node.n); // 沒中才往下找更細的
       }
@@ -61,6 +62,30 @@ export function matchCodes(nodes: CodeNode[], query: string): string[] {
   walk(nodes);
   if (out.length === 0 || out.length > MAX_MATCHES) return [];
   return out;
+}
+
+/** 地區同名多處時的回傳結構 —— 不直接搜尋，讓模型知道要跟使用者確認 */
+export interface AreaAmbiguityResult {
+  readonly ambiguousArea: {
+    readonly query: string;
+    readonly matches: readonly FlatCode[];
+    readonly hint: string;
+  };
+}
+
+/** 組出同名多區的確認訊息（例如「信義區」→ 台北市信義區、基隆市信義區） */
+export function buildAreaAmbiguity(query: string, matches: readonly FlatCode[]): AreaAmbiguityResult {
+  const names = matches.map((m) => m.name).join("、");
+  return {
+    ambiguousArea: {
+      query,
+      matches,
+      hint:
+        `地區「${query}」同名多處：${names}。` +
+        `請向使用者確認要哪一個，再用完整名稱（如「${matches[0]?.name ?? query}」）重新搜尋；` +
+        `若使用者全部都要，就分別搜尋再彙整。`,
+    },
+  };
 }
 
 // ── 快取 + 抓取 ──────────────────────────────────────────────
@@ -76,8 +101,8 @@ async function fetchTree(url: string): Promise<CodeNode[]> {
   return (await res.json()) as CodeNode[];
 }
 
-/** 解析地區名稱 → 官方代碼陣列（抓不到表時回空陣列，不讓整個搜尋失敗） */
-export async function resolveAreaCodes(query: string): Promise<string[]> {
+/** 解析地區名稱 → 命中的節點清單（code+name）。抓不到表時回空陣列，不讓整個搜尋失敗 */
+export async function resolveAreaMatches(query: string): Promise<FlatCode[]> {
   if (!areaTree) {
     log("fetching Area.json...");
     areaTree = fetchTree(CONFIG.areaJsonUrl);
@@ -86,19 +111,19 @@ export async function resolveAreaCodes(query: string): Promise<string[]> {
     return matchCodes(await areaTree, query);
   } catch (err) {
     areaTree = null; // 失敗就清掉快取，下次重試
-    log("resolveAreaCodes failed:", err instanceof Error ? err.message : err);
+    log("resolveAreaMatches failed:", err instanceof Error ? err.message : err);
     return [];
   }
 }
 
-/** 解析職類名稱 → 官方代碼陣列 */
+/** 解析職類名稱 → 官方代碼陣列。多重命中維持聯集（相關職類一起查通常是想要的） */
 export async function resolveJobCatCodes(query: string): Promise<string[]> {
   if (!jobCatTree) {
     log("fetching JobCat.json...");
     jobCatTree = fetchTree(CONFIG.jobCatJsonUrl);
   }
   try {
-    return matchCodes(await jobCatTree, query);
+    return matchCodes(await jobCatTree, query).map((m) => m.code);
   } catch (err) {
     jobCatTree = null;
     log("resolveJobCatCodes failed:", err instanceof Error ? err.message : err);

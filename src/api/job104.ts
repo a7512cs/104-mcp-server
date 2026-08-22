@@ -28,7 +28,13 @@ import {
   type JobTypeKey,
   type ExperienceKey,
 } from "../query.js";
-import { resolveAreaCodes, resolveJobCatCodes } from "../codes.js";
+import {
+  resolveAreaMatches,
+  resolveJobCatCodes,
+  buildAreaAmbiguity,
+  type AreaAmbiguityResult,
+  type FlatCode,
+} from "../codes.js";
 
 const log = (...args: unknown[]) => console.error("[104-mcp:api]", ...args);
 
@@ -109,18 +115,25 @@ export interface SearchResult {
   readonly jobs: readonly Job[];
 }
 
-/** 依關鍵字 + 篩選條件搜尋職缺 */
-export async function searchJobs(params: SearchParams): Promise<SearchResult> {
+/** 依關鍵字 + 篩選條件搜尋職缺。地區同名多處時回 AreaAmbiguityResult（不搜尋，讓模型跟使用者確認） */
+export async function searchJobs(params: SearchParams): Promise<SearchResult | AreaAmbiguityResult> {
   const {
     keyword, area, salaryMin, excludeNegotiable, excludeFeatured,
     jobCategory, remote, jobType, experience, page, limit,
   } = params;
 
   // 地區、職類：名稱 → 官方代碼（抓不到就回空陣列，退回 client 端子字串過濾）
-  const [areaCodes, jobCatCodes] = await Promise.all([
-    area ? resolveAreaCodes(area) : Promise.resolve<string[]>([]),
+  const [areaMatches, jobCatCodes] = await Promise.all([
+    area ? resolveAreaMatches(area) : Promise.resolve<FlatCode[]>([]),
     jobCategory ? resolveJobCatCodes(jobCategory) : Promise.resolve<string[]>([]),
   ]);
+
+  // 同名多區（如「信義區」= 台北+基隆）：地理上不相干，聯集沒意義 → 回去確認
+  if (areaMatches.length > 1) {
+    log(`area "${area}" ambiguous: ${areaMatches.map((m) => m.name).join(", ")}`);
+    return buildAreaAmbiguity(area!, areaMatches);
+  }
+  const areaCodes = areaMatches.map((m) => m.code);
 
   const url = buildSearchUrl({
     keyword,
