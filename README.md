@@ -73,9 +73,9 @@
 > | 職務技能（職類層級，如「軟體工程系統開發」）| — | `jobSkills` | — |
 > | 公司頁網址（餵給 `get_company_jobs`）| `companyUrl` | `companyUrl` | — |
 > | 是否為廣告位（`jobType=1`）| `featured` | — | — |
-> | 更新日期（頁面的「MM/DD更新」）| `appearDate` | `appearDate` | `appearDate` |
+> | 更新日期（頁面的「MM/DD更新」）| `appearDate` | `appearDate` | — |
 >
-> `jobId` 一律是 **slug**（如 `7uqyj`），不是 104 內部數字 —— slug 才能餵回 `get_job_detail`。`skills` 到哪都是「具體技術」。`appearDate` 三處格式是 104 原樣、各不相同（搜尋 `20260817` · 詳情 `2026/08/22` · 公司 `8/20`，公司 API 原始就沒給年份）。
+> `jobId` 一律是 **slug**（如 `7uqyj`），不是 104 內部數字 —— slug 才能餵回 `get_job_detail`。`skills` 到哪都是「具體技術」。`appearDate` 統一為 `YYYY/MM/DD`。公司職缺**刻意不回**日期：公司 API 原始只有 `8/20` 這種無年份格式，久未更新的殭屍職缺看起來永遠像最近更新（實測有 2025 年的缺混在裡面），跨年靜默誤導 —— 想要某筆的日期，把它的 `jobId` 餵給 `get_job_detail` 拿完整的。
 
 ### `get_job_detail` 參數
 

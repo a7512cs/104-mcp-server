@@ -18,6 +18,7 @@ export interface Job {
   /** 擅長工具/語言（具體技術，如 C++、Linux）。跨工具語意一致：詳情的 skills 也是這個 */
   readonly skills: readonly string[];
   readonly url: string;
+  /** 更新日期（YYYY/MM/DD，頁面上的「MM/DD更新」）—— 跟 get_job_detail 同格式 */
   readonly appearDate: string;
   /** 是否為 104 廣告位（jobType=1，會無視關鍵字硬塞在最前面）。優先位(2)不算，仍是有效結果 */
   readonly featured: boolean;
@@ -52,6 +53,13 @@ function formatSalary(low?: number, high?: number): string {
   return `月薪 ${fmt(high!)} 元以下`;
 }
 
+/** 搜尋 API 的日期是 8 碼數字（20260817），轉成跟詳情 API 一致的 2026/08/17；非預期格式原樣放行 */
+function formatAppearDate(raw?: string): string {
+  if (!raw) return "";
+  const m = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+  return m ? `${m[1]}/${m[2]}/${m[3]}` : raw;
+}
+
 /** 104 用 [[[關鍵字]]] 標記命中的字，清掉這些標記 */
 function stripHighlight(text: string): string {
   return text.replace(/\[\[\[|\]\]\]/g, "").trim();
@@ -75,7 +83,7 @@ export function normalizeJob(raw: RawJob): Job {
     salary: formatSalary(raw.salaryLow, raw.salaryHigh),
     skills: (raw.pcSkills ?? []).map((s) => s.description ?? "").filter(Boolean),
     url: raw.link?.job ?? "",
-    appearDate: raw.appearDate ?? "",
+    appearDate: formatAppearDate(raw.appearDate),
     // 只有 jobType=1 是會無視關鍵字硬塞的廣告；0(一般)和 2(優先位) 都是有效結果，一起分析
     featured: raw.jobType === 1,
   };
@@ -235,7 +243,8 @@ export interface CompanyJob {
   readonly education: string;
   readonly experience: string;
   readonly url: string;
-  readonly appearDate: string;
+  // 刻意不含 appearDate：公司 API 原始只有 "8/20" 這種無年份格式，
+  // 殭屍職缺看起來永遠像最近更新，跨年靜默誤導。要日期就把 jobId 餵給 get_job_detail。
 }
 
 /** 公司 API 的原始職缺（只列會用到的欄位） */
@@ -247,7 +256,6 @@ interface RawCompanyJob {
   jobSalaryDesc?: string;
   edu?: string;
   periodDesc?: string;
-  appearDate?: string;
 }
 
 /** 把公司 API 的原始職缺轉成乾淨的 CompanyJob（防腐層） */
@@ -260,6 +268,5 @@ export function normalizeCompanyJob(raw: RawCompanyJob): CompanyJob {
     education: raw.edu ?? "",
     experience: raw.periodDesc ?? "",
     url: raw.jobUrl ?? "",
-    appearDate: raw.appearDate ?? "",
   };
 }

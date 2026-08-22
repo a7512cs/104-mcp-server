@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeJob, normalizeJobDetail, NEGOTIABLE } from "../dist/types.js";
+import { normalizeJob, normalizeJobDetail, normalizeCompanyJob, NEGOTIABLE } from "../dist/types.js";
 
 test("normalizeJob: 薪資 0/0 → 面議", () => {
   const job = normalizeJob({ salaryLow: 0, salaryHigh: 0 });
@@ -79,6 +79,16 @@ test("normalizeJobDetail: ref 帶入 jobId(slug) 與 url，跟其他工具一致
   const d = normalizeJobDetail({ header: { jobName: "x" } }, { jobId: "7uqyj", url: "https://www.104.com.tw/job/7uqyj" });
   assert.equal(d.jobId, "7uqyj");
   assert.equal(d.url, "https://www.104.com.tw/job/7uqyj");
+});
+
+test("normalizeJob: appearDate 從 20260817 轉成 2026/08/17（跟詳情同格式）", () => {
+  assert.equal(normalizeJob({ appearDate: "20260817" }).appearDate, "2026/08/17");
+  assert.equal(normalizeJob({}).appearDate, ""); // 缺值回空字串
+});
+
+test("normalizeCompanyJob: 不回傳 appearDate（原始只有 8/20 無年份，跨年會靜默誤導）", () => {
+  const job = normalizeCompanyJob({ jobNo: "x", appearDate: "8/20" });
+  assert.ok(!("appearDate" in job)); // 要日期就把 jobId 餵給 get_job_detail 拿完整的
 });
 
 test("normalizeJobDetail: appearDate 取自 header（頁面上的「MM/DD更新」）", () => {
