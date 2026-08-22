@@ -10,13 +10,52 @@
 | 想寫個一次性爬蟲抓資料 | Playwright / cycletls 腳本就好，不用 MCP |
 | 想讓 Claude 幫你分析/比對/彙整/自動化職缺 | **這個 MCP** |
 
-## ⚠️ 免責聲明（請先讀）
+## 安裝
 
-- 104 **沒有公開官方 API**。本專案使用的是網頁前端的**非官方內部 endpoint**，隨時可能因 104 改版而失效。
-- 自動化存取**可能違反 104 的服務條款**。本專案僅供**個人、低頻、學習用途**。
-- **請勿**拿去做高頻抓取、大量爬取，或架成公開服務 —— 容易被封鎖，也有法律風險。
-- 本專案已內建禮貌性節流（每次請求間隔隨機 1.5~3.5 秒），請勿移除或調低。
-- 使用本專案造成的任何後果，使用者自負。
+以下三種**擇一**，看你用什麼 client：
+
+**A：有快捷指令的 client** —— 一行搞定，設定自動寫好：
+
+```bash
+claude mcp add job104 -- npx -y mcp-server-104   # Claude Code
+```
+
+```bash
+codex mcp add job104 -- npx -y mcp-server-104    # OpenAI Codex CLI（新版才有；舊版走 B 的 TOML）
+```
+
+**B：手動貼設定的 client** —— 把設定貼進該 client 的 MCP 設定檔：
+
+Claude Desktop / Cursor / Windsurf（JSON）：
+
+```json
+{
+  "mcpServers": {
+    "job104": { "command": "npx", "args": ["-y", "mcp-server-104"] }
+  }
+}
+```
+
+OpenAI Codex CLI 舊版（`~/.codex/config.toml`）：
+
+```toml
+[mcp_servers.job104]
+command = "npx"
+args = ["-y", "mcp-server-104"]
+```
+
+> A 和 B 做的是同一件事：告訴 client「用 npx 啟動這個 server」。核心到哪都是 `npx -y mcp-server-104`，差別只在各家 client 怎麼登記它。
+>
+> ⚠️ ChatGPT 網頁／桌面版**接不上**這種本機型（stdio）server —— 它只支援遠端 URL 型 MCP，它的雲端上沒有你的電腦可以跑 `npx`。
+
+**C：開發者，想改 code** —— clone 這個 repo 後：
+
+```bash
+npm install && npm run build
+claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
+```
+
+日常指令與測試策略見下方「開發」。
 
 ## 用什麼方法取得資料
 
@@ -174,36 +213,14 @@ node scripts/smoke-test.mjs   # 煙霧測試（連真實 104）
 npm run inspect               # 開 MCP Inspector GUI 除錯
 ```
 
+改完 code 要 `npm run build`，然後重啟 Claude Code（或用 `/mcp` reconnect）才會生效 —— client 只在 session 啟動時抓一次工具清單。
+
 **測試策略**：純邏輯（normalize、組網址、過濾）都抽到 `types.ts` / `query.ts`，用 Node 內建 `node --test` 測，快又不用連網 —— 改壞馬上知道。碰網路的部分（`job104.ts` / `httpClient.ts`）用 smoke-test 對真實 104 驗證。
 
-## 安裝
+## ⚠️ 免責聲明
 
-**一般使用（npm，免 clone 免 build）**：
-
-```bash
-claude mcp add job104 -- npx -y mcp-server-104
-```
-
-Claude Desktop / Cursor 等其他 MCP client 加這段 config：
-
-```json
-{
-  "mcpServers": {
-    "job104": { "command": "npx", "args": ["-y", "mcp-server-104"] }
-  }
-}
-```
-
-**本機開發（clone 這個 repo 後）**：
-
-```bash
-npm install && npm run build
-claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
-```
-
-改完 code 要 `npm run build`，然後重啟 Claude Code（或用 `/mcp` reconnect）才會生效。
-
-## 兩個必記的坑
-
-1. **stdout 是協議專用管線。** stdio 模式下用 `console.log` 會污染 JSON-RPC 訊息，直接斷線。log 一律走 `stderr`。
-2. **`description` 是模型唯一的判斷依據。** 模型靠它決定要不要呼叫 tool，寫清楚比寫漂亮重要。
+- 104 **沒有公開官方 API**。本專案使用的是網頁前端的**非官方內部 endpoint**，隨時可能因 104 改版而失效。
+- 自動化存取**可能違反 104 的服務條款**。本專案僅供**個人、低頻、學習用途**。
+- **請勿**拿去做高頻抓取、大量爬取，或架成公開服務 —— 容易被封鎖，也有法律風險。
+- 本專案已內建禮貌性節流（每次請求間隔隨機 1.5~3.5 秒），請勿移除或調低。
+- 使用本專案造成的任何後果，使用者自負。
