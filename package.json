@@ -1,8 +1,33 @@
 {
   "name": "mcp-server-104",
   "version": "0.1.0",
-  "description": "MCP server for 104 job bank (Taiwan)",
+  "description": "Unofficial MCP server for 104.com.tw (Taiwan job board): search jobs, job details, company openings",
   "type": "module",
+  "license": "MIT",
+  "author": "a7512cs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a7512cs/104-mcp-server.git"
+  },
+  "homepage": "https://github.com/a7512cs/104-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/a7512cs/104-mcp-server/issues"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "104",
+    "job-search",
+    "taiwan",
+    "claude"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist"
+  ],
   "bin": {
     "mcp-server-104": "dist/index.js"
   },
@@ -10,7 +35,8 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
-    "test": "npm run build && node --test test/*.test.mjs"
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

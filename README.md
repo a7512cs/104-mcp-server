@@ -146,7 +146,8 @@ src/
   index.ts            進入點：建 server、掛 tool、接 stdio、處理關閉
   config.ts           所有設定 / 魔術數字（JA3 指紋、endpoint、節流區間…）
   types.ts            乾淨型別 + normalizeJob / JobDetail / CompanyJob（防腐層）
-  query.ts            純函式：組查詢網址、解析 slug/公司碼、client 端過濾、enum 對照
+  query.ts            純函式：組查詢網址、client 端過濾、enum 對照
+  slug.ts             從 104 網址取出職缺 slug / 公司碼（types/query 共用）
   codes.ts            地區/職類「名稱→官方代碼」解析（樹狀比對+剪枝，快取代碼表）
   api/
     httpClient.ts     cycletls 單例（TLS 指紋偽裝）
@@ -175,9 +176,28 @@ npm run inspect               # 開 MCP Inspector GUI 除錯
 
 **測試策略**：純邏輯（normalize、組網址、過濾）都抽到 `types.ts` / `query.ts`，用 Node 內建 `node --test` 測，快又不用連網 —— 改壞馬上知道。碰網路的部分（`job104.ts` / `httpClient.ts`）用 smoke-test 對真實 104 驗證。
 
-## 接到 Claude Code
+## 安裝
+
+**一般使用（npm，免 clone 免 build）**：
 
 ```bash
+claude mcp add job104 -- npx -y mcp-server-104
+```
+
+Claude Desktop / Cursor 等其他 MCP client 加這段 config：
+
+```json
+{
+  "mcpServers": {
+    "job104": { "command": "npx", "args": ["-y", "mcp-server-104"] }
+  }
+}
+```
+
+**本機開發（clone 這個 repo 後）**：
+
+```bash
+npm install && npm run build
 claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 ```
 
