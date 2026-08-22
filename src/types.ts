@@ -95,6 +95,8 @@ export interface JobDetail {
   readonly companyUrl: string;
   /** 職缺網址 */
   readonly url: string;
+  /** 更新日期（頁面上的「MM/DD更新」，原始格式 YYYY/MM/DD） */
+  readonly appearDate: string;
   readonly salary: string;
   /** 地區（區級，如「新北市新店區」）—— 跟 search_jobs / get_company_jobs 的 area 一致 */
   readonly area: string;
@@ -134,7 +136,7 @@ interface LanguageItem {
 
 /** 104 詳情原始結構（只列會用到的欄位） */
 interface RawJobDetail {
-  header?: { jobName?: string; custName?: string; custUrl?: string };
+  header?: { jobName?: string; custName?: string; custUrl?: string; appearDate?: string };
   jobDetail?: {
     jobDescription?: string;
     salary?: string;
@@ -197,6 +199,7 @@ export function normalizeJobDetail(
     companyName: raw.header?.custName ?? "",
     companyUrl: raw.header?.custUrl ?? "",
     url: ref.url,
+    appearDate: raw.header?.appearDate ?? "",
     salary: jd.salary ?? "",
     area: jd.addressRegion ?? "",
     location,

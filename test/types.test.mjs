@@ -81,6 +81,11 @@ test("normalizeJobDetail: ref 帶入 jobId(slug) 與 url，跟其他工具一致
   assert.equal(d.url, "https://www.104.com.tw/job/7uqyj");
 });
 
+test("normalizeJobDetail: appearDate 取自 header（頁面上的「MM/DD更新」）", () => {
+  const d = normalizeJobDetail({ header: { appearDate: "2026/08/22" } });
+  assert.equal(d.appearDate, "2026/08/22");
+});
+
 test("normalizeJobDetail: companyUrl 取自 header.custUrl", () => {
   const d = normalizeJobDetail({ header: { custUrl: "https://www.104.com.tw/company/xyz99" } });
   assert.equal(d.companyUrl, "https://www.104.com.tw/company/xyz99");
