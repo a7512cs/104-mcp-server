@@ -15,6 +15,8 @@ export interface Job {
   readonly companyUrl: string;
   readonly area: string;
   readonly salary: string;
+  /** 應徵人數 —— 判斷這筆職缺的競爭程度 */
+  readonly applyCount: number;
   /** 擅長工具/語言（具體技術，如 C++、Linux）。跨工具語意一致：詳情的 skills 也是這個 */
   readonly skills: readonly string[];
   readonly url: string;
@@ -32,6 +34,10 @@ interface RawJob {
   jobAddrNoDesc?: string;
   salaryLow?: number;
   salaryHigh?: number;
+  /** 薪資類型：10=面議、30=時薪、40=日薪、50=月薪、60=年薪 */
+  s10?: number;
+  /** 應徵人數 */
+  applyCnt?: number;
   pcSkills?: { description?: string }[];
   link?: { job?: string; cust?: string };
   appearDate?: string;
@@ -43,14 +49,19 @@ export const NEGOTIABLE = "面議";
 /** 104 用這個值表示「上限不設」，要正規化成「以上」，不能直接印出來 */
 const NO_UPPER_LIMIT = 9_999_999;
 
-/** 把薪資數字轉成人看得懂的字串（0/0 代表面議；上限 9999999 代表不設上限） */
-function formatSalary(low?: number, high?: number): string {
-  if (!low && !high) return NEGOTIABLE;
+/** 104 薪資類型代碼（搜尋 API 的 s10）：10=面議、30=時薪、40=日薪、50=月薪、60=年薪 */
+const SALARY_TYPE_PREFIX: Record<number, string> = { 30: "時薪", 40: "日薪", 50: "月薪", 60: "年薪" };
+const SALARY_TYPE_NEGOTIABLE = 10;
+
+/** 把薪資數字轉成人看得懂的字串（type=10 或 0/0 代表面議；上限 9999999 代表不設上限） */
+function formatSalary(low?: number, high?: number, type?: number): string {
+  if (type === SALARY_TYPE_NEGOTIABLE || (!low && !high)) return NEGOTIABLE;
+  const prefix = SALARY_TYPE_PREFIX[type ?? 0] ?? "月薪"; // 沒給 s10 時退回月薪（歷史行為）
   const fmt = (n: number) => n.toLocaleString("en-US");
   const hasUpper = !!high && high < NO_UPPER_LIMIT; // 濾掉 9999999 這個哨兵值
-  if (low && hasUpper) return `月薪 ${fmt(low)}~${fmt(high!)} 元`;
-  if (low) return `月薪 ${fmt(low)} 元以上`; // 含 low>0 且上限不設的情況
-  return `月薪 ${fmt(high!)} 元以下`;
+  if (low && hasUpper) return `${prefix} ${fmt(low)}~${fmt(high!)} 元`;
+  if (low) return `${prefix} ${fmt(low)} 元以上`; // 含 low>0 且上限不設的情況
+  return `${prefix} ${fmt(high!)} 元以下`;
 }
 
 /** 搜尋 API 的日期是 8 碼數字（20260817），轉成跟詳情 API 一致的 2026/08/17；非預期格式原樣放行 */
@@ -80,7 +91,8 @@ export function normalizeJob(raw: RawJob): Job {
     companyName: raw.custName ?? "",
     companyUrl: raw.link?.cust ?? "",
     area: raw.jobAddrNoDesc ?? "",
-    salary: formatSalary(raw.salaryLow, raw.salaryHigh),
+    salary: formatSalary(raw.salaryLow, raw.salaryHigh, raw.s10),
+    applyCount: raw.applyCnt ?? 0,
     skills: (raw.pcSkills ?? []).map((s) => s.description ?? "").filter(Boolean),
     url: raw.link?.job ?? "",
     appearDate: formatAppearDate(raw.appearDate),
@@ -115,6 +127,10 @@ export interface JobDetail {
   /** 需求工作經歷 —— 跟 get_company_jobs 的 experience 同名同義 */
   readonly experience: string;
   readonly education: string;
+  /** 科系要求，例如「資訊工程相關」 */
+  readonly majors: readonly string[];
+  /** 其他條件 —— 常藏關鍵資訊（外派地點、證照要求等），別漏看 */
+  readonly otherConditions: string;
   /** 擅長工具/語言（具體技術，如 C++、Linux）—— 跟 search_jobs 的 skills 同一種東西 */
   readonly skills: readonly string[];
   /** 職務技能（職類層級描述，如「軟體工程系統開發」）—— 跟 skills 不同層級 */
@@ -158,6 +174,9 @@ interface RawJobDetail {
   condition?: {
     workExp?: string;
     edu?: string;
+    major?: string[];
+    /** 通常是字串，偶爾是字串陣列 */
+    other?: string | string[];
     skill?: CodeItem[];
     specialty?: CodeItem[];
     language?: LanguageItem[];
@@ -215,6 +234,8 @@ export function normalizeJobDetail(
     categories: descriptions(jd.jobCategory),
     experience: cond.workExp ?? "",
     education: cond.edu ?? "",
+    majors: cond.major ?? [],
+    otherConditions: (Array.isArray(cond.other) ? cond.other.filter(Boolean).join("\n") : (cond.other ?? "")).trim(),
     // skills = 擅長工具/語言（跟 search 的 skills 一致），jobSkills = 職務技能（職類層級）
     skills: descriptions(cond.specialty),
     jobSkills: descriptions(cond.skill),

@@ -81,6 +81,20 @@ test("normalizeJobDetail: ref 帶入 jobId(slug) 與 url，跟其他工具一致
   assert.equal(d.url, "https://www.104.com.tw/job/7uqyj");
 });
 
+test("normalizeJob: s10 薪資類型 —— 時薪/日薪/月薪/年薪，不再寫死月薪", () => {
+  assert.equal(normalizeJob({ salaryLow: 235, salaryHigh: 265, s10: 30 }).salary, "時薪 235~265 元");
+  assert.equal(normalizeJob({ salaryLow: 1250, salaryHigh: 0, s10: 40 }).salary, "日薪 1,250 元以上");
+  assert.equal(normalizeJob({ salaryLow: 1000000, salaryHigh: 9999999, s10: 60 }).salary, "年薪 1,000,000 元以上");
+  assert.equal(normalizeJob({ salaryLow: 60000, salaryHigh: 80000, s10: 50 }).salary, "月薪 60,000~80,000 元");
+  assert.equal(normalizeJob({ salaryLow: 60000, salaryHigh: 80000 }).salary, "月薪 60,000~80,000 元"); // 沒 s10 → 預設月薪
+  assert.equal(normalizeJob({ salaryLow: 0, salaryHigh: 0, s10: 10 }).salary, NEGOTIABLE); // 10 = 面議
+});
+
+test("normalizeJob: applyCount 應徵人數（判斷競爭度）", () => {
+  assert.equal(normalizeJob({ applyCnt: 12 }).applyCount, 12);
+  assert.equal(normalizeJob({}).applyCount, 0);
+});
+
 test("normalizeJob: appearDate 從 20260817 轉成 2026/08/17（跟詳情同格式）", () => {
   assert.equal(normalizeJob({ appearDate: "20260817" }).appearDate, "2026/08/17");
   assert.equal(normalizeJob({}).appearDate, ""); // 缺值回空字串
@@ -112,6 +126,17 @@ test("normalizeJobDetail: skills=擅長工具(specialty) / jobSkills=職務技�
   assert.deepEqual(d.categories, ["軟體工程師"]);
   assert.deepEqual(d.skills, ["Linux", "C++"]); // 跟 search_jobs 的 skills 同一種東西
   assert.deepEqual(d.jobSkills, ["軟體工程系統開發"]);
+});
+
+test("normalizeJobDetail: majors 科系要求、otherConditions 其他條件（外派/證照這類關鍵資訊）", () => {
+  const d = normalizeJobDetail({
+    condition: { major: ["資訊工程相關", "電機電子工程相關"], other: "本職務需出差外派（工作地點：日本）\n" },
+  });
+  assert.deepEqual(d.majors, ["資訊工程相關", "電機電子工程相關"]);
+  assert.equal(d.otherConditions, "本職務需出差外派（工作地點：日本）");
+  // 104 的 other 偶爾是陣列，容忍並合併
+  assert.equal(normalizeJobDetail({ condition: { other: ["條件A", "條件B"] } }).otherConditions, "條件A\n條件B");
+  assert.equal(normalizeJobDetail({}).otherConditions, "");
 });
 
 test("normalizeJobDetail: 福利標籤直接帶出", () => {
