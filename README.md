@@ -1,6 +1,6 @@
 # mcp-server-104
 
-台灣 104 人力銀行的 MCP server。讓 Claude（或任何 MCP client）能直接搜尋 104 的即時職缺。
+台灣 [104 人力銀行](https://www.104.com.tw/)的**非官方** MCP server。讓 Claude（或任何 MCP client）能直接搜尋 104 的即時職缺。
 
 ## 這個工具適合你嗎？
 
