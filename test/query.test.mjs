@@ -8,6 +8,7 @@ import {
   REMOTE_CODES,
   JOB_TYPE_CODES,
   EXPERIENCE_CODES,
+  SORT_CODES,
 } from "../dist/query.js";
 
 const params = (url) => new URL(url).searchParams;
@@ -103,4 +104,16 @@ test("filterJobs: 不設條件 → 回新陣列（不可變）", () => {
   const r = filterJobs(jobs, {});
   assert.equal(r.length, 2);
   assert.notEqual(r, jobs);
+});
+
+test("SORT_CODES: newest=16（掃新缺靠它）、salary=13", () => {
+  assert.equal(SORT_CODES.newest, "16");
+  assert.equal(SORT_CODES.salary, "13");
+});
+
+test("buildSearchUrl: 給 order → 覆寫預設排序", () => {
+  const newest = params(buildSearchUrl({ keyword: "Rust", order: "16" }));
+  assert.equal(newest.get("order"), "16");
+  const salary = params(buildSearchUrl({ keyword: "Rust", order: "13" }));
+  assert.equal(salary.get("order"), "13");
 });

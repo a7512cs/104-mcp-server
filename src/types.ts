@@ -17,6 +17,8 @@ export interface Job {
   readonly salary: string;
   /** 應徵人數 —— 判斷這筆職缺的競爭程度 */
   readonly applyCount: number;
+  /** 員工人數 —— 0 代表「未公開」（約半數公司不提供），不是 0 人。小公司/新創過濾用 */
+  readonly employeeCount: number;
   /** 擅長工具/語言（具體技術，如 C++、Linux）。跨工具語意一致：詳情的 skills 也是這個 */
   readonly skills: readonly string[];
   readonly url: string;
@@ -38,6 +40,8 @@ interface RawJob {
   s10?: number;
   /** 應徵人數 */
   applyCnt?: number;
+  /** 員工人數；約半數公司不提供（缺欄位或 0） */
+  employeeCount?: number | string;
   pcSkills?: { description?: string }[];
   link?: { job?: string; cust?: string };
   appearDate?: string;
@@ -93,6 +97,7 @@ export function normalizeJob(raw: RawJob): Job {
     area: raw.jobAddrNoDesc ?? "",
     salary: formatSalary(raw.salaryLow, raw.salaryHigh, raw.s10),
     applyCount: raw.applyCnt ?? 0,
+    employeeCount: Number(raw.employeeCount) || 0,
     skills: (raw.pcSkills ?? []).map((s) => s.description ?? "").filter(Boolean),
     url: raw.link?.job ?? "",
     appearDate: formatAppearDate(raw.appearDate),

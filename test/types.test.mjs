@@ -143,3 +143,12 @@ test("normalizeJobDetail: 福利標籤直接帶出", () => {
   const d = normalizeJobDetail({ welfare: { tag: ["年終獎金", "三節獎金"] } });
   assert.deepEqual(d.welfareTags, ["年終獎金", "三節獎金"]);
 });
+
+test("normalizeJob: employeeCount 數字直取、數字字串轉數字", () => {
+  assert.equal(normalizeJob({ employeeCount: 28 }).employeeCount, 28);
+  assert.equal(normalizeJob({ employeeCount: "3900" }).employeeCount, 3900);
+});
+
+test("normalizeJob: employeeCount 缺欄位 → 0（0 代表未公開，不是 0 人）", () => {
+  assert.equal(normalizeJob({}).employeeCount, 0);
+});

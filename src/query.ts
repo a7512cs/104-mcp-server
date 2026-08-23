@@ -25,9 +25,13 @@ export const EXPERIENCE_CODES = {
   "over-10y": "99",
 } as const;
 
+/** 排序（order）：newest=16 最新更新在前（掃新缺/擴編偵測用）、salary=13 待遇高→低。預設 15 相關性 */
+export const SORT_CODES = { newest: "16", salary: "13" } as const;
+
 export type RemoteKey = keyof typeof REMOTE_CODES;
 export type JobTypeKey = keyof typeof JOB_TYPE_CODES;
 export type ExperienceKey = keyof typeof EXPERIENCE_CODES;
+export type SortKey = keyof typeof SORT_CODES;
 
 /** 組搜尋網址用的參數（代碼已解析、enum 已是 104 值） */
 export interface SearchQuery {
@@ -39,6 +43,7 @@ export interface SearchQuery {
   readonly remoteWork?: string; // "1" | "2" | "1,2"
   readonly jobType?: string; // ro: "1" | "2"
   readonly experience?: string; // jobexp: "1" | "3" | "5" | "10" | "99"
+  readonly order?: string; // "16" 最新 | "13" 薪資（未給用預設 15 相關性）
   readonly page?: number;
 }
 
@@ -46,7 +51,7 @@ export interface SearchQuery {
 export function buildSearchUrl(q: SearchQuery): string {
   const params = new URLSearchParams({
     keyword: q.keyword,
-    order: "15", // 相關性排序
+    order: q.order ?? "15", // 預設相關性排序
     pagesize: String(CONFIG.pageSize),
   });
   if (q.page && q.page > 1) params.set("page", String(q.page));

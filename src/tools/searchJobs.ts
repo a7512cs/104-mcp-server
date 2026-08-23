@@ -53,6 +53,12 @@ export function registerSearchJobs(server: McpServer): void {
           .enum(["under-1y", "1-3y", "3-5y", "5-10y", "over-10y"])
           .optional()
           .describe("需求年資級距：under-1y(1年以下)/1-3y/3-5y/5-10y/over-10y(10年以上)"),
+        sort: z
+          .enum(["newest", "salary"])
+          .optional()
+          .describe(
+            "排序：newest 最新更新在前（找新開職缺/掃描擴編用，建議搭配 excludeFeatured=true，否則廣告位仍會無視排序卡在最前面）/ salary 待遇由高到低。不給則用 104 預設的相關性排序",
+          ),
         page: z
           .number()
           .int()

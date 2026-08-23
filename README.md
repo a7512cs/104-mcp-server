@@ -88,6 +88,7 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 | `remote` | | 遠端：`full` 完全遠端 / `partial` 部分遠端 / `any` 皆可 |
 | `jobType` | | 工作性質：`fulltime` 全職 / `parttime` 兼職 |
 | `experience` | | 需求年資：`under-1y` / `1-3y` / `3-5y` / `5-10y` / `over-10y` |
+| `sort` | | 排序：`newest` 最新更新在前（掃新缺用，建議配 `excludeFeatured=true`）/ `salary` 待遇高→低。預設相關性 |
 | `page` | | 第幾頁（每頁 20 筆），預設 1。想看更多就往後翻 |
 | `limit` | | 本頁回傳筆數上限，最多 20，預設 5 |
 
@@ -98,6 +99,7 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 > 4. `remoteWork`=1完全/2部分、`ro`=1全職/2兼職、`jobexp`=1/3/5/10/99（互斥年資級距）。
 > 5. 地區/職類用**樹狀代碼表 + 剪枝**：命中父節點（如「新竹縣市」）就用父代碼，不展開成一堆子代碼 —— 展開太多會讓 104 回 `400`。地區**同名多處**（如「信義區」）不聯集也不搜尋，回 `ambiguousArea` 請模型跟使用者確認（地理上不相干的地方聯集沒意義）；職類多重命中則維持聯集（相關職類一起查通常是想要的）。
 > 6. **廣告偵測**：104 會在結果最前面塞廣告（原始欄位 `jobType=1`），它會**無視關鍵字**（例如護理師搜尋跑出「COACH 精品銷售」）。每筆回傳 `featured` 旗標標記它，`excludeFeatured=true` 可整批濾掉。`jobType=2`（付費優先位）仍符合關鍵字，視為有效結果不標記。搜尋列表刻意不含完整 JD（精簡、避免模型整理清單時把某筆網址對錯到別筆），完整內容用 `get_job_detail`。
+> 7. **掃新缺姿勢**：`sort=newest`（`order=16`，實測）最新更新在前，但廣告位連排序都無視、照樣卡最前面 —— 配 `excludeFeatured=true` 才是乾淨的最新清單。另外 `employeeCount=0` 代表「未公開」（約半數公司不提供），不是 0 人。
 
 > **欄位命名跨三個工具一致**（都對照 104 原始欄位語意，避免同名不同物）：
 >
@@ -113,6 +115,7 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 > | 公司頁網址（餵給 `get_company_jobs`）| `companyUrl` | `companyUrl` | — |
 > | 是否為廣告位（`jobType=1`）| `featured` | — | — |
 > | 更新日期（頁面的「MM/DD更新」）| `appearDate` | `appearDate` | — |
+> | 員工人數 | `employeeCount`（數字，0=未公開） | `employees`（字串） | — |
 >
 > `jobId` 一律是 **slug**（如 `7uqyj`），不是 104 內部數字 —— slug 才能餵回 `get_job_detail`。`skills` 到哪都是「具體技術」。`appearDate` 統一為 `YYYY/MM/DD`。公司職缺**刻意不回**日期：公司 API 原始只有 `8/20` 這種無年份格式，久未更新的殭屍職缺看起來永遠像最近更新（實測有 2025 年的缺混在裡面），跨年靜默誤導 —— 想要某筆的日期，把它的 `jobId` 餵給 `get_job_detail` 拿完整的。
 
@@ -157,7 +160,7 @@ GET https://www.104.com.tw/jobs/search/api/jobs
 |------|------|--------|
 | `keyword` | 關鍵字 | 自由文字 |
 | `kwop` | 關鍵字運算 | `7`（全符合） |
-| `order` | 排序 | `15` 相關性(預設) · `16` 最新 · `13` 薪資 |
+| `order` | 排序 | `15` 相關性(預設) · `16` 最新（實測） · `13` 薪資 |
 | `page` / `pagesize` | 分頁 | `pagesize` 建議 20 |
 | `area` | 地區碼（逗號分隔） | 查 `Area.json`（見下） |
 | `jobcat` | 職類碼（逗號分隔） | 查 `JobCat.json` |

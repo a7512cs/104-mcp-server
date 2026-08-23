@@ -24,9 +24,11 @@ import {
   REMOTE_CODES,
   JOB_TYPE_CODES,
   EXPERIENCE_CODES,
+  SORT_CODES,
   type RemoteKey,
   type JobTypeKey,
   type ExperienceKey,
+  type SortKey,
 } from "../query.js";
 import {
   resolveAreaMatches,
@@ -104,6 +106,8 @@ export interface SearchParams {
   readonly jobType?: JobTypeKey;
   /** 年資級距 */
   readonly experience?: ExperienceKey;
+  /** 排序：newest 最新更新在前 / salary 待遇高→低。未給＝相關性 */
+  readonly sort?: SortKey;
   /** 第幾頁（每頁 20 筆），預設 1。想抓更多就往後翻 */
   readonly page?: number;
   readonly limit: number;
@@ -119,7 +123,7 @@ export interface SearchResult {
 export async function searchJobs(params: SearchParams): Promise<SearchResult | AreaAmbiguityResult> {
   const {
     keyword, area, salaryMin, excludeNegotiable, excludeFeatured,
-    jobCategory, remote, jobType, experience, page, limit,
+    jobCategory, remote, jobType, experience, sort, page, limit,
   } = params;
 
   // 地區、職類：名稱 → 官方代碼（抓不到就回空陣列，退回 client 端子字串過濾）
@@ -144,6 +148,7 @@ export async function searchJobs(params: SearchParams): Promise<SearchResult | A
     remoteWork: remote ? REMOTE_CODES[remote] : undefined,
     jobType: jobType ? JOB_TYPE_CODES[jobType] : undefined,
     experience: experience ? EXPERIENCE_CODES[experience] : undefined,
+    order: sort ? SORT_CODES[sort] : undefined,
     page,
   });
   log(`search: ${url}`);
