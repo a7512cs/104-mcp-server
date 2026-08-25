@@ -12,6 +12,7 @@ import {
   normalizeJob,
   normalizeJobDetail,
   normalizeCompanyJob,
+  mergeCompanyJobLists,
   type Job,
   type JobDetail,
   type CompanyJob,
@@ -220,13 +221,14 @@ export async function getCompanyJobs(params: CompanyJobsParams): Promise<Company
     | undefined;
   if (!data) throw new Error(`找不到公司 ${code} 的職缺`);
 
-  // 合併「置頂職缺」+「一般職缺」
-  const raw = [...(data.list?.topJobs ?? []), ...(data.list?.normalJobs ?? [])];
-  const jobs = raw.map((r) => normalizeCompanyJob(r as never));
+  // 置頂/一般分開 normalize —— 置頂不佔 limit 名額（佔了會截掉每頁尾端，見 mergeCompanyJobLists）
+  const top = (data.list?.topJobs ?? []).map((r) => normalizeCompanyJob(r as never));
+  const normal = (data.list?.normalJobs ?? []).map((r) => normalizeCompanyJob(r as never));
+  const jobs = mergeCompanyJobLists(top, normal, limit, page ?? 1);
 
   return {
     total: data.totalCount ?? jobs.length,
     page: page ?? 1,
-    jobs: jobs.slice(0, limit),
+    jobs,
   };
 }

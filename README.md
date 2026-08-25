@@ -131,7 +131,7 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 |------|:----:|------|
 | `companyUrlOrId` | ✅ | 公司網址或代碼，例如 `https://www.104.com.tw/company/1a2x6blghh` 或 `1a2x6blghh` |
 | `page` | | 第幾頁（每頁 20 筆），預設 1 |
-| `limit` | | 本頁回傳筆數上限，最多 20，預設 10 |
+| `limit` | | 一般職缺的回傳筆數上限，最多 20，預設 10。**要完整翻頁請用 20**——上游每頁固定 20 筆一般職缺，較小 limit 會截掉該頁尾端。置頂職缺（`pinned=true`）只在第 1 頁回、不佔名額 |
 
 **三個工具怎麼串**：
 - `search_jobs` / `get_job_detail` 每筆都回 `url`（職缺）和 `companyUrl`（公司）兩個網址。

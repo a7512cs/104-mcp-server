@@ -13,7 +13,8 @@ export function registerGetCompanyJobs(server: McpServer): void {
     {
       title: "列出某公司所有職缺",
       description:
-        "列出「某一家指定公司」在 104 上所有在徵的職缺（職稱、地區、薪資、學經歷要求、網址）。這不是關鍵字搜尋 —— 是拿一家已知公司去看它全部的缺。公司網址請用 search_jobs 或 get_job_detail 回傳的 companyUrl 欄位。可分頁。",
+        "列出「某一家指定公司」在 104 上所有在徵的職缺（職稱、地區、薪資、學經歷要求、網址）。這不是關鍵字搜尋 —— 是拿一家已知公司去看它全部的缺。公司網址請用 search_jobs 或 get_job_detail 回傳的 companyUrl 欄位。可分頁。" +
+        "要完整翻頁請用 limit=20 —— 上游每頁固定回 20 筆一般職缺，較小的 limit 會截掉該頁尾端。置頂職缺（pinned=true）只在第 1 頁回、不佔 limit 名額。",
       inputSchema: {
         companyUrlOrId: z
           .string()
@@ -33,7 +34,9 @@ export function registerGetCompanyJobs(server: McpServer): void {
           .min(1)
           .max(CONFIG.maxLimit)
           .default(10)
-          .describe(`本頁回傳筆數上限，最多 ${CONFIG.maxLimit}，預設 10`),
+          .describe(
+            `一般職缺的回傳筆數上限，最多 ${CONFIG.maxLimit}，預設 10。要完整翻頁（不漏該頁尾端）請用 ${CONFIG.maxLimit}；置頂職缺另計、不佔名額`,
+          ),
       },
     },
     async ({ companyUrlOrId, page, limit }) => {

@@ -269,6 +269,8 @@ export interface CompanyJob {
   readonly education: string;
   readonly experience: string;
   readonly url: string;
+  /** 置頂職缺（公司付費置頂）。只在第 1 頁回、不佔 limit 名額；一般職缺不帶此欄位 */
+  readonly pinned?: boolean;
   // 刻意不含 appearDate：公司 API 原始只有 "8/20" 這種無年份格式，
   // 殭屍職缺看起來永遠像最近更新，跨年靜默誤導。要日期就把 jobId 餵給 get_job_detail。
 }
@@ -295,4 +297,21 @@ export function normalizeCompanyJob(raw: RawCompanyJob): CompanyJob {
     experience: raw.periodDesc ?? "",
     url: raw.jobUrl ?? "",
   };
+}
+
+/**
+ * 合併置頂（topJobs）與一般（normalJobs）職缺。
+ * 104 上游每頁固定回「置頂 3 筆＋一般 20 筆」，一般職缺按固定 20 筆窗口分頁；
+ * 若讓置頂佔掉 limit 名額，每頁尾端的一般職缺會被截掉且下一頁不會補回
+ * （實測聯發科 464 筆漏掉約 66 筆）。
+ * 因此：limit 只約束一般職缺；置頂另計、標 pinned；置頂每頁重複回，page>1 直接略過。
+ */
+export function mergeCompanyJobLists(
+  top: readonly CompanyJob[],
+  normal: readonly CompanyJob[],
+  limit: number,
+  page: number,
+): CompanyJob[] {
+  const pinned = page > 1 ? [] : top.map((j) => ({ ...j, pinned: true }));
+  return [...pinned, ...normal.slice(0, limit)];
 }
