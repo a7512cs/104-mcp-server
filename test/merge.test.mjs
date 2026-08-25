@@ -34,6 +34,13 @@ test("mergeCompanyJobLists: limit 只約束一般職缺 —— limit10 → 3置�
   assert.equal(jobs[12].jobId, "N10");
 });
 
+test("mergeCompanyJobLists: 置頂數量不固定也不假設 —— 2 個置頂就回 2+20", () => {
+  const jobs = mergeCompanyJobLists(tops(2), normals(20), 20, 1);
+  assert.equal(jobs.length, 22);
+  assert.equal(jobs.filter((j) => j.pinned).length, 2);
+  assert.equal(jobs[21].jobId, "N20"); // 一般職缺尾端照樣完整
+});
+
 test("mergeCompanyJobLists: 無置頂的公司行為不變", () => {
   const jobs = mergeCompanyJobLists([], normals(20), 20, 1);
   assert.equal(jobs.length, 20);
