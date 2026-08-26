@@ -93,3 +93,20 @@ export function filterJobs(
   }
   return result;
 }
+
+/**
+ * 對過濾後的列表套 limit —— limit 只數一般職缺，廣告位（featured）另計、不佔名額。
+ * 104 上游每頁固定回 20 筆一般職缺＋0~2 筆「額外疊加」的廣告（實測 page1 原始 22 筆）；
+ * 若讓廣告佔名額，limit=20 時每頁尾端的一般職缺會被截掉且下一頁不補回
+ * （跟公司頁置頂職缺同款問題，見 mergeCompanyJobLists）。取滿 limit 筆一般職缺即截斷。
+ */
+export function limitJobs(jobs: readonly Job[], limit: number): Job[] {
+  const out: Job[] = [];
+  let normals = 0;
+  for (const job of jobs) {
+    if (normals >= limit) break; // 取滿即斷，其後的項目（含廣告）不再跟回
+    out.push(job);
+    if (!job.featured) normals++;
+  }
+  return out;
+}

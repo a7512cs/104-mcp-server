@@ -9,6 +9,7 @@ import {
   JOB_TYPE_CODES,
   EXPERIENCE_CODES,
   SORT_CODES,
+  limitJobs,
 } from "../dist/query.js";
 
 const params = (url) => new URL(url).searchParams;
@@ -116,4 +117,35 @@ test("buildSearchUrl: 給 order → 覆寫預設排序", () => {
   assert.equal(newest.get("order"), "16");
   const salary = params(buildSearchUrl({ keyword: "Rust", order: "13" }));
   assert.equal(salary.get("order"), "13");
+});
+
+// 造 n 筆一般職缺（jobId 遞增，好認尾端有沒有被砍）
+const normalsN = (n) => Array.from({ length: n }, (_, i) => mk({ jobId: `N${i + 1}` }));
+
+test("limitJobs: 廣告不佔名額 —— 頁首2廣告+20一般/limit20 → 22筆，尾端不被砍", () => {
+  const jobs = limitJobs(
+    [mk({ jobId: "A1", featured: true }), mk({ jobId: "A2", featured: true }), ...normalsN(20)],
+    20,
+  );
+  assert.equal(jobs.length, 22);
+  assert.equal(jobs.at(-1).jobId, "N20"); // 上一版會砍 N19/N20，這條就是防守它
+});
+
+test("limitJobs: limit 只數一般職缺 —— 2廣告+limit5 → 7筆", () => {
+  const jobs = limitJobs([mk({ featured: true }), mk({ featured: true }), ...normalsN(20)], 5);
+  assert.equal(jobs.length, 7);
+  assert.equal(jobs.filter((j) => j.featured).length, 2);
+  assert.equal(jobs.at(-1).jobId, "N5");
+});
+
+test("limitJobs: 沒有廣告時等同 slice", () => {
+  const jobs = limitJobs(normalsN(20), 5);
+  assert.equal(jobs.length, 5);
+  assert.equal(jobs.at(-1).jobId, "N5");
+});
+
+test("limitJobs: 取滿 limit 筆一般後即截斷（其後的廣告不再跟回）", () => {
+  const jobs = limitJobs([...normalsN(5), mk({ jobId: "A9", featured: true })], 5);
+  assert.equal(jobs.length, 5);
+  assert.equal(jobs.at(-1).jobId, "N5");
 });

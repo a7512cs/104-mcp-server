@@ -22,6 +22,7 @@ import {
   extractSlug,
   extractCompanyCode,
   filterJobs,
+  limitJobs,
   REMOTE_CODES,
   JOB_TYPE_CODES,
   EXPERIENCE_CODES,
@@ -166,7 +167,8 @@ export async function searchJobs(params: SearchParams): Promise<SearchResult | A
   return {
     total: pagination?.total ?? filtered.length,
     page: page ?? 1,
-    jobs: filtered.slice(0, limit),
+    // limit 只數一般職缺 —— 廣告佔名額會截掉每頁尾端（見 limitJobs）
+    jobs: limitJobs(filtered, limit),
   };
 }
 
