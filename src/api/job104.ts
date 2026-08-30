@@ -13,9 +13,11 @@ import {
   normalizeJobDetail,
   normalizeCompanyJob,
   mergeCompanyJobLists,
+  buildCompanyKeywordResult,
   type Job,
   type JobDetail,
   type CompanyJob,
+  type CompanyKeywordResult,
 } from "../types.js";
 import {
   buildSearchUrl,
@@ -121,8 +123,14 @@ export interface SearchResult {
   readonly jobs: readonly Job[];
 }
 
-/** 依關鍵字 + 篩選條件搜尋職缺。地區同名多處時回 AreaAmbiguityResult（不搜尋，讓模型跟使用者確認） */
-export async function searchJobs(params: SearchParams): Promise<SearchResult | AreaAmbiguityResult> {
+/**
+ * 依關鍵字 + 篩選條件搜尋職缺。
+ * 地區同名多處 → AreaAmbiguityResult；關鍵字被判定為公司名 → CompanyKeywordResult
+ * （都是「錯誤即資料」：不搜尋，回結構化提示讓模型決定下一步）。
+ */
+export async function searchJobs(
+  params: SearchParams,
+): Promise<SearchResult | AreaAmbiguityResult | CompanyKeywordResult> {
   const {
     keyword, area, salaryMin, excludeNegotiable, excludeFeatured,
     jobCategory, remote, jobType, experience, sort, page, limit,
@@ -156,16 +164,31 @@ export async function searchJobs(params: SearchParams): Promise<SearchResult | A
   log(`search: ${url}`);
 
   const body = await fetchWithRetry(url, CONFIG.referer);
+  const metadata = body.metadata as
+    | { pagination?: { total?: number }; companyKeyword?: boolean }
+    | undefined;
+  // 104 的「這是公司名」暗號：data 空、無 pagination、只有 companyKeyword:true。
+  // 翻譯給模型，不吞掉也不硬搜（帶 searchJobs=1 能壓掉暗號，但回的是全文模糊結果，
+  // 第一筆常是代理商 —— 實測「聯發科」第一筆是文曄科技，靜默誤導比查無結果更糟）。
+  if (metadata?.companyKeyword) {
+    log(`keyword "${keyword}" judged as company name by 104`);
+    return buildCompanyKeywordResult(keyword);
+  }
+  const pagination = metadata?.pagination;
+  // 沒有分頁資訊 = 沒見過的回應形狀（104 改版或新的轉介暗號）。寧可吵，不要騙 ——
+  // 這裡曾經靜默 fallback 成 0 筆，把「公司名關鍵字」演成「查無職缺」。
+  if (typeof pagination?.total !== "number") {
+    throw new Error(`104 回應缺少分頁資訊（keyword="${keyword}"），可能是 104 改版或未知的轉介訊號`);
+  }
   const rawJobs = Array.isArray(body.data) ? body.data : [];
-  const pagination = (body.metadata as { pagination?: { total?: number } } | undefined)?.pagination;
-  log(`captured ${rawJobs.length} raw jobs (total=${pagination?.total ?? "?"})`);
+  log(`captured ${rawJobs.length} raw jobs (total=${pagination.total})`);
 
   // 正規化 → client 端過濾（地區 + 排除面議）
   const normalized = rawJobs.map((raw) => normalizeJob(raw as never));
   const filtered = filterJobs(normalized, { area, excludeNegotiable, excludeFeatured });
 
   return {
-    total: pagination?.total ?? filtered.length,
+    total: pagination.total,
     page: page ?? 1,
     // limit 只數一般職缺 —— 廣告佔名額會截掉每頁尾端（見 limitJobs）
     jobs: limitJobs(filtered, limit),

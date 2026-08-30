@@ -53,6 +53,8 @@ export function buildSearchUrl(q: SearchQuery): string {
     keyword: q.keyword,
     order: q.order ?? "15", // 預設相關性排序
     pagesize: String(CONFIG.pageSize),
+    // 刻意不帶 searchJobs=1：關鍵字被 104 判定為公司名時，讓它回 companyKeyword 暗號，
+    // 由 job104.ts 翻譯成給模型的提示（硬搜會回全文模糊結果，混入代理商/供應鏈，靜默誤導）。
   });
   if (q.page && q.page > 1) params.set("page", String(q.page));
 
@@ -87,7 +89,7 @@ export function filterJobs(
   if (opts.excludeNegotiable) {
     result = result.filter((job) => job.salary !== NEGOTIABLE);
   }
-  // 排除 104 付費推廣位（jobType≠0）—— 這些會無視關鍵字硬塞在最前面
+  // 排除 104 廣告位（jobType=1；jobType=2 付費優先位是有效結果，不算）—— 廣告會無視關鍵字硬塞在最前面
   if (opts.excludeFeatured) {
     result = result.filter((job) => !job.featured);
   }

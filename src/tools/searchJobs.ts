@@ -15,7 +15,8 @@ export function registerSearchJobs(server: McpServer): void {
       description:
         "依關鍵字與篩選條件搜尋台灣 104 人力銀行的即時職缺，回傳職稱、公司、地區、薪資、需求技能與職缺網址。支援地區、薪資下限、職類、遠端、全/兼職、年資篩選，以及分頁。" +
         "若 area 同名多處（如「信義區」有台北市與基隆市兩個），不會直接搜尋，改回傳 ambiguousArea 候選清單 —— 此時請向使用者確認是哪一個，再用完整名稱（如「台北市信義區」）重新搜尋。" +
-        "limit 只數一般職缺：廣告位（featured=true）另計、不佔名額。要完整翻頁請用 limit=20（上游每頁固定 20 筆一般職缺）；跨頁彙整時用 jobId 去重（最新排序下新缺插入會使分頁窗口飄移）。",
+        "limit 只數一般職缺：廣告位（featured=true）另計、不佔名額。要完整翻頁請用 limit=20（上游每頁固定 20 筆一般職缺）；跨頁彙整時用 jobId 去重（最新排序下新缺插入會使分頁窗口飄移）。" +
+        "keyword 適合職務/技能詞；輸入公司名稱時 104 不執行搜尋，本工具會回 companyKeyword 提示 —— 此時請改用 find_company 找到公司，再用 get_company_jobs 取得該公司職缺。",
       inputSchema: {
         keyword: z.string().min(1).describe("職務關鍵字，例如 'Rust 工程師'"),
         area: z

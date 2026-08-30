@@ -315,3 +315,31 @@ export function mergeCompanyJobLists(
   const pinned = page > 1 ? [] : top.map((j) => ({ ...j, pinned: true }));
   return [...pinned, ...normal.slice(0, limit)];
 }
+
+// ─────────────────────────────────────────────────────────────
+// 「公司名關鍵字」回應（search_jobs 用）
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 104 對「長得像公司名」的關鍵字不執行職缺搜尋，改回 metadata.companyKeyword:true 暗號
+ * （data 為空、無 pagination）。這包是把暗號翻譯給「模型」看的結構化提示 —— 錯誤即資料，
+ * 跟 ambiguousArea 同款；使用者只會看到模型消化後的人話。
+ */
+export interface CompanyKeywordResult {
+  readonly companyKeyword: {
+    readonly query: string;
+    readonly hint: string;
+  };
+}
+
+/** 把 104 的公司名暗號翻譯成給模型的下一步指示 */
+export function buildCompanyKeywordResult(query: string): CompanyKeywordResult {
+  return {
+    companyKeyword: {
+      query,
+      hint:
+        `104 判定「${query}」是公司名稱，未執行職缺搜尋（硬搜會回全文模糊結果，混入代理商與供應鏈廠商，容易誤導）。` +
+        `要這家公司自己的職缺：先用 find_company 以名稱取得 companyId，再用 get_company_jobs 列出職缺（可帶 keyword 在該公司內搜，例如 C++）。`,
+    },
+  };
+}

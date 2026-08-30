@@ -24,6 +24,10 @@ test("buildSearchUrl: 只有關鍵字 → 不帶篩選參數", () => {
   }
 });
 
+test("buildSearchUrl: 刻意不帶 searchJobs —— 保留 104 的 companyKeyword 暗號給翻譯層用", () => {
+  assert.equal(params(buildSearchUrl({ keyword: "聯發科" })).get("searchJobs"), null);
+});
+
 test("buildSearchUrl: salaryMin → scmin+sctp=M+scstrict=1+scneg=1（保留面議）", () => {
   const p = params(buildSearchUrl({ keyword: "Rust", salaryMin: 60000 }));
   assert.equal(p.get("scmin"), "60000");

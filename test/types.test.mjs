@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeJob, normalizeJobDetail, normalizeCompanyJob, NEGOTIABLE } from "../dist/types.js";
+import { normalizeJob, normalizeJobDetail, normalizeCompanyJob, NEGOTIABLE, buildCompanyKeywordResult } from "../dist/types.js";
 
 test("normalizeJob: 薪資 0/0 → 面議", () => {
   const job = normalizeJob({ salaryLow: 0, salaryHigh: 0 });
@@ -151,4 +151,11 @@ test("normalizeJob: employeeCount 數字直取、數字字串轉數字", () => {
 
 test("normalizeJob: employeeCount 缺欄位 → 0（0 代表未公開，不是 0 人）", () => {
   assert.equal(normalizeJob({}).employeeCount, 0);
+});
+
+test("buildCompanyKeywordResult: 把 104 的公司名暗號翻譯成下一步指示（觀眾是模型）", () => {
+  const r = buildCompanyKeywordResult("聯發科");
+  assert.equal(r.companyKeyword.query, "聯發科");
+  assert.ok(r.companyKeyword.hint.includes("find_company"), "要指名 find_company");
+  assert.ok(r.companyKeyword.hint.includes("get_company_jobs"), "要指名 get_company_jobs");
 });
