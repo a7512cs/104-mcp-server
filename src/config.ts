@@ -12,6 +12,10 @@ export const CONFIG = {
   companyApiBase: "https://www.104.com.tw/api/companies/",
   /** 公司頁網址（當公司請求的 Referer，代碼接在後面） */
   companyPageBase: "https://www.104.com.tw/company/",
+  /** 公司搜尋 API（官網「找公司」頁用的；模糊比對，含公司簡介全文） */
+  companySearchApiUrl: "https://www.104.com.tw/company/ajax/list",
+  /** 公司搜尋的 Referer */
+  companySearchReferer: "https://www.104.com.tw/company/search/",
   /** 地區代碼表（樹狀 JSON，放 static.104，沒有 Cloudflare） */
   areaJsonUrl: "https://static.104.com.tw/category-tool/json/Area.json",
   /** 職類代碼表（樹狀 JSON，放 static.104，沒有 Cloudflare） */
@@ -35,4 +39,6 @@ export const CONFIG = {
   pageSize: 20,
   /** 回傳筆數硬上限，避免一次抓太多 */
   maxLimit: 20,
+  /** 公司職缺的 limit 上限 —— 上游 pageSize 有 20/50/100 檔位，keyword 模式常想一次拿完（實測聯發科 C++ = 98 筆） */
+  maxCompanyLimit: 100,
 } as const;

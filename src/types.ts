@@ -5,6 +5,7 @@
  * 這個型別和 tool 都不用動。
  */
 import { extractSlug } from "./slug.js";
+import { CONFIG } from "./config.js";
 
 export interface Job {
   /** 職缺代碼（slug，如 7uqyj）—— 可直接餵給 get_job_detail。三個工具語意一致 */
@@ -341,5 +342,99 @@ export function buildCompanyKeywordResult(query: string): CompanyKeywordResult {
         `104 判定「${query}」是公司名稱，未執行職缺搜尋（硬搜會回全文模糊結果，混入代理商與供應鏈廠商，容易誤導）。` +
         `要這家公司自己的職缺：先用 find_company 以名稱取得 companyId，再用 get_company_jobs 列出職缺（可帶 keyword 在該公司內搜，例如 C++）。`,
     },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// 公司名片（find_company 用）
+// ─────────────────────────────────────────────────────────────
+
+/** 公司名片 —— find_company 的回傳單位 */
+export interface CompanyCard {
+  /** 公司代碼（slug，如 12noppgo）—— 可直接餵給 get_company_jobs */
+  readonly companyId: string;
+  readonly companyName: string;
+  /** 公司頁網址（也可餵 get_company_jobs） */
+  readonly companyUrl: string;
+  readonly area: string;
+  readonly industry: string;
+  /** 員工數（104 原樣字串，如「員工數16000人」；未提供為空字串） */
+  readonly employees: string;
+  /** 資本額（原樣字串，如「資本額150億」） */
+  readonly capital: string;
+  /** 在徵職缺數 —— 分辨同名公司的關鍵（本尊通常有缺，掛名店面多半 0） */
+  readonly jobCount: number;
+}
+
+/** /company/ajax/list 的原始公司（只列會用到的欄位） */
+interface RawCompanyCard {
+  /** ⚠️ 公司 slug 在這支 API 叫 encodedCustNo；mixSearch 叫 custNo；職缺搜尋的 custNo 又是數字 —— 對外一律統一成 companyId */
+  encodedCustNo?: string;
+  name?: string;
+  areaDesc?: string;
+  industryDesc?: string;
+  employeeCountDesc?: string;
+  capitalDesc?: string;
+  jobCount?: number;
+}
+
+/** 把公司搜尋的原始資料轉成乾淨名片（防腐層） */
+export function normalizeCompanyCard(raw: RawCompanyCard): CompanyCard {
+  const slug = raw.encodedCustNo ?? "";
+  return {
+    companyId: slug,
+    companyName: (raw.name ?? "").trim(),
+    companyUrl: slug ? `${CONFIG.companyPageBase}${slug}` : "",
+    area: raw.areaDesc ?? "",
+    industry: raw.industryDesc ?? "",
+    employees: raw.employeeCountDesc ?? "",
+    capital: raw.capitalDesc ?? "",
+    jobCount: raw.jobCount ?? 0,
+  };
+}
+
+/**
+ * find_company 的回傳：
+ * - 唯一命中（或名稱完全相符）→ company 單一名片
+ * - 多家符合 → candidates 候選 + hint（觀眾是模型：請跟使用者確認，不要猜）
+ * - 找不到 → 只有 total=0 + hint
+ * total 是 104 回報的符合總數 —— 模糊比對含「簡介提及」，通常偏大。
+ */
+export interface FindCompanyResult {
+  readonly total: number;
+  readonly company?: CompanyCard;
+  readonly candidates?: readonly CompanyCard[];
+  readonly hint?: string;
+}
+
+/** 候選清單上限 —— 超過只會稀釋判斷（本尊幾乎都在前幾筆） */
+const MAX_COMPANY_CANDIDATES = 5;
+
+/** 從公司搜尋結果挑選：不猜 —— 唯一或完全相符才直接回，否則交給模型跟使用者確認 */
+export function pickCompany(
+  cards: readonly CompanyCard[],
+  total: number,
+  query: string,
+): FindCompanyResult {
+  if (cards.length === 0) {
+    return {
+      total: 0,
+      hint: `104 找不到名稱符合「${query}」的公司。可換更完整的全名、常用簡稱，或中英文互換再試。`,
+    };
+  }
+  if (total === 1 && cards.length === 1) {
+    return { total, company: cards[0] };
+  }
+  const exact = cards.find((c) => c.companyName === query.trim());
+  if (exact) {
+    return { total, company: exact };
+  }
+  return {
+    total,
+    candidates: cards.slice(0, MAX_COMPANY_CANDIDATES),
+    hint:
+      `「${query}」符合多家公司（共 ${total} 家，含簡介提及的；此處列前 ${Math.min(cards.length, MAX_COMPANY_CANDIDATES)} 家）。` +
+      `請向使用者確認是哪一家 —— 用名稱、產業、地區、在徵職缺數分辨，不要自行猜選。` +
+      `確認後把該筆 companyId 餵給 get_company_jobs（可帶 keyword 在該公司內搜職缺）。`,
   };
 }

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeJob, normalizeJobDetail, normalizeCompanyJob, NEGOTIABLE, buildCompanyKeywordResult } from "../dist/types.js";
+import { normalizeJob, normalizeJobDetail, normalizeCompanyJob, NEGOTIABLE, buildCompanyKeywordResult, normalizeCompanyCard, pickCompany } from "../dist/types.js";
 
 test("normalizeJob: 薪資 0/0 → 面議", () => {
   const job = normalizeJob({ salaryLow: 0, salaryHigh: 0 });
@@ -158,4 +158,71 @@ test("buildCompanyKeywordResult: 把 104 的公司名暗號翻譯成下一步指
   assert.equal(r.companyKeyword.query, "聯發科");
   assert.ok(r.companyKeyword.hint.includes("find_company"), "要指名 find_company");
   assert.ok(r.companyKeyword.hint.includes("get_company_jobs"), "要指名 get_company_jobs");
+});
+
+// ── 公司名片（find_company） ──────────────────────────────────
+
+const card = (over) => normalizeCompanyCard({ encodedCustNo: "x1", name: "某公司", jobCount: 3, ...over });
+
+test("normalizeCompanyCard: encodedCustNo → companyId(slug)，並組出 companyUrl", () => {
+  const c = normalizeCompanyCard({
+    encodedCustNo: "12noppgo",
+    name: " 聯發科技股份有限公司 ",
+    areaDesc: "新竹市",
+    industryDesc: "半導體製造業",
+    employeeCountDesc: "員工數16000人",
+    capitalDesc: "資本額150億",
+    jobCount: 465,
+  });
+  assert.equal(c.companyId, "12noppgo");
+  assert.equal(c.companyName, "聯發科技股份有限公司"); // trim
+  assert.equal(c.companyUrl, "https://www.104.com.tw/company/12noppgo"); // 可直接餵 get_company_jobs
+  assert.equal(c.jobCount, 465);
+});
+
+test("normalizeCompanyCard: 缺欄位不炸 —— 空字串/0", () => {
+  const c = normalizeCompanyCard({});
+  assert.equal(c.companyId, "");
+  assert.equal(c.companyUrl, ""); // 沒 slug 就不硬組網址
+  assert.equal(c.jobCount, 0);
+});
+
+test("pickCompany: 唯一命中 → 直接回單一名片", () => {
+  const r = pickCompany([card({ encodedCustNo: "a1", name: "獨一無二公司" })], 1, "獨一無二");
+  assert.equal(r.total, 1);
+  assert.equal(r.company.companyId, "a1");
+  assert.equal(r.candidates, undefined);
+});
+
+test("pickCompany: 名稱完全相符 → 即使多家也直接回那筆（輸入就是全名）", () => {
+  const cards = [
+    card({ encodedCustNo: "a5h92m0", name: "台灣積體電路製造股份有限公司(台積電)" }),
+    card({ encodedCustNo: "b2", name: "台積電機有限公司" }),
+  ];
+  const r = pickCompany(cards, 662, "台積電機有限公司");
+  assert.equal(r.company.companyId, "b2");
+  assert.equal(r.total, 662);
+});
+
+test("pickCompany: 多家無完全相符 → 候選+hint，不猜（觀眾是模型）", () => {
+  const cards = [card({ encodedCustNo: "c1", name: "聯發科技股份有限公司" }), card({ encodedCustNo: "c2", name: "全家便利商店聯發科店" })];
+  const r = pickCompany(cards, 102, "聯發科");
+  assert.equal(r.company, undefined); // 就是不猜 —— 這條防守它
+  assert.equal(r.candidates.length, 2);
+  assert.ok(r.hint.includes("確認"));
+  assert.ok(r.hint.includes("get_company_jobs"));
+});
+
+test("pickCompany: 候選最多 5 筆（超過只稀釋判斷）", () => {
+  const cards = Array.from({ length: 8 }, (_, i) => card({ encodedCustNo: `n${i}`, name: `公司${i}` }));
+  const r = pickCompany(cards, 200, "公司");
+  assert.equal(r.candidates.length, 5);
+});
+
+test("pickCompany: 找不到 → total=0 + hint，沒有 company/candidates", () => {
+  const r = pickCompany([], 0, "不存在的公司名");
+  assert.equal(r.total, 0);
+  assert.equal(r.company, undefined);
+  assert.equal(r.candidates, undefined);
+  assert.ok(r.hint.length > 0);
 });

@@ -112,3 +112,15 @@ export function limitJobs(jobs: readonly Job[], limit: number): Job[] {
   }
   return out;
 }
+
+/** 公司職缺 API 的 pageSize 檔位（實測只接受 20/50/100） */
+export const COMPANY_PAGE_SIZES = [20, 50, 100] as const;
+
+/**
+ * 依 limit 挑「涵蓋它的最小檔位」當上游 pageSize。
+ * limit≤20 → 20（跟舊行為完全一致）；21~50 → 50；51~100 → 100。
+ * ⚠️ 翻頁時要沿用同一個 limit —— 分頁窗口大小由檔位決定，中途換 limit 會跳掉或重複。
+ */
+export function companyPageSize(limit: number): number {
+  return COMPANY_PAGE_SIZES.find((s) => s >= limit) ?? 100;
+}

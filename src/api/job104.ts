@@ -14,10 +14,13 @@ import {
   normalizeCompanyJob,
   mergeCompanyJobLists,
   buildCompanyKeywordResult,
+  normalizeCompanyCard,
+  pickCompany,
   type Job,
   type JobDetail,
   type CompanyJob,
   type CompanyKeywordResult,
+  type FindCompanyResult,
 } from "../types.js";
 import {
   buildSearchUrl,
@@ -25,6 +28,7 @@ import {
   extractCompanyCode,
   filterJobs,
   limitJobs,
+  companyPageSize,
   REMOTE_CODES,
   JOB_TYPE_CODES,
   EXPERIENCE_CODES,
@@ -219,6 +223,8 @@ export async function getJobDetail(jobUrlOrSlug: string): Promise<JobDetail> {
 
 export interface CompanyJobsParams {
   readonly companyUrlOrCode: string;
+  /** 在這家公司內搜職缺 —— 比對職稱與 JD 內文（含「其他條件」欄）。⚠️ 多字詞是 OR 不是 AND（實測） */
+  readonly keyword?: string;
   readonly page?: number;
   readonly limit: number;
 }
@@ -229,13 +235,19 @@ export interface CompanyJobsResult {
   readonly jobs: readonly CompanyJob[];
 }
 
-/** 取得某公司的所有職缺（分頁） */
+/**
+ * 取得某公司的職缺（分頁），可帶 keyword 在公司內搜尋（就是公司頁上那個搜尋框的 API）。
+ * ⚠️ totalCount 不含置頂職缺（實測 465 缺 → totalCount 462）；帶 keyword 時置頂會變 0~1 筆。
+ */
 export async function getCompanyJobs(params: CompanyJobsParams): Promise<CompanyJobsResult> {
-  const { companyUrlOrCode, page, limit } = params;
+  const { companyUrlOrCode, keyword, page, limit } = params;
   const code = extractCompanyCode(companyUrlOrCode);
   if (!code) throw new Error("無法從輸入取得公司代碼");
 
-  const query = new URLSearchParams({ page: String(page ?? 1), pageSize: String(CONFIG.pageSize) });
+  // pageSize 取涵蓋 limit 的最小檔位（20/50/100）：limit≤20 時跟舊行為完全一致，
+  // keyword 模式常想一次拿完（實測聯發科 C++ = 98 筆，pageSize=100 一趟收工）
+  const query = new URLSearchParams({ page: String(page ?? 1), pageSize: String(companyPageSize(limit)) });
+  if (keyword?.trim()) query.set("keyword", keyword.trim());
   const url = `${CONFIG.companyApiBase}${code}/jobs?${query.toString()}`;
   const referer = `${CONFIG.companyPageBase}${code}`;
   log(`company jobs: ${url}`);
@@ -256,4 +268,30 @@ export async function getCompanyJobs(params: CompanyJobsParams): Promise<Company
     page: page ?? 1,
     jobs,
   };
+}
+
+// ── 找公司 ────────────────────────────────────────────────────
+
+/**
+ * 用名稱找公司（104「找公司」頁的搜尋）。模糊比對含簡介全文：
+ * 英文別名（MediaTek）找得到中文本尊，但也會混入「簡介提及」的無關公司 ——
+ * 所以不猜：唯一命中或名稱完全相符才回單一名片，否則回候選讓模型跟使用者確認。
+ */
+export async function findCompany(name: string): Promise<FindCompanyResult> {
+  const queryName = name.trim();
+  if (!queryName) throw new Error("公司名稱不可為空");
+
+  const params = new URLSearchParams({ keyword: queryName, mode: "s", page: "1", pageSize: "10" });
+  const url = `${CONFIG.companySearchApiUrl}?${params.toString()}`;
+  log(`find company: ${url}`);
+
+  const body = await fetchWithRetry(url, CONFIG.companySearchReferer);
+  const total = (body.metadata as { pagination?: { total?: number } } | undefined)?.pagination?.total;
+  // 同 searchJobs：讀不懂的回應形狀就出聲，不要靜默演成「查無公司」
+  if (typeof total !== "number") {
+    throw new Error(`104 公司搜尋回應缺少分頁資訊（name="${queryName}"），可能是 104 改版`);
+  }
+  const raw = Array.isArray(body.data) ? body.data : [];
+  const cards = raw.map((r) => normalizeCompanyCard(r as never)).filter((c) => c.companyId);
+  return pickCompany(cards, total, queryName);
 }

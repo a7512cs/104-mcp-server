@@ -10,6 +10,7 @@ import {
   EXPERIENCE_CODES,
   SORT_CODES,
   limitJobs,
+  companyPageSize,
 } from "../dist/query.js";
 
 const params = (url) => new URL(url).searchParams;
@@ -152,4 +153,13 @@ test("limitJobs: 取滿 limit 筆一般後即截斷（其後的廣告不再跟�
   const jobs = limitJobs([...normalsN(5), mk({ jobId: "A9", featured: true })], 5);
   assert.equal(jobs.length, 5);
   assert.equal(jobs.at(-1).jobId, "N5");
+});
+
+test("companyPageSize: 取涵蓋 limit 的最小檔位（20/50/100）—— limit≤20 跟舊行為完全一致", () => {
+  assert.equal(companyPageSize(1), 20);
+  assert.equal(companyPageSize(20), 20); // 舊行為不變 —— 這條防守相容性
+  assert.equal(companyPageSize(21), 50);
+  assert.equal(companyPageSize(50), 50);
+  assert.equal(companyPageSize(51), 100);
+  assert.equal(companyPageSize(100), 100);
 });

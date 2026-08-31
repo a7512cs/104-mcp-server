@@ -6,16 +6,22 @@
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { createRequire } from "node:module";
 import { registerSearchJobs } from "./tools/searchJobs.js";
+import { registerFindCompany } from "./tools/findCompany.js";
 import { registerGetJobDetail } from "./tools/getJobDetail.js";
 import { registerGetCompanyJobs } from "./tools/getCompanyJobs.js";
 import { closeClient } from "./api/httpClient.js";
 
 const log = (...args: unknown[]) => console.error("[104-mcp]", ...args);
 
-const server = new McpServer({ name: "mcp-server-104", version: "0.1.0" });
+// 版本直接讀 package.json，不再手抄（曾經停在 0.1.0 忘了跟 npm 版本一起動）
+const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
+
+const server = new McpServer({ name: "mcp-server-104", version });
 
 registerSearchJobs(server);
+registerFindCompany(server);
 registerGetJobDetail(server);
 registerGetCompanyJobs(server);
 

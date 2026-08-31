@@ -72,6 +72,7 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 | Tool | 狀態 | 說明 |
 |------|------|------|
 | `search_jobs` | ✅ 真實資料 | 依關鍵字 + 多種篩選搜尋職缺，支援分頁 |
+| `find_company` | ✅ 真實資料 | 用公司名稱找公司，回名片（companyId、產業、員工數、在徵職缺數）；同名多家回候選不猜 |
 | `get_job_detail` | ✅ 真實資料 | 取得單筆職缺完整詳情：完整 JD、薪資、地點、學經歷要求、技能、語言能力、福利、產業別 |
 | `get_company_jobs` | ✅ 真實資料 | 列出某公司所有在徵職缺（分頁） |
 
@@ -102,7 +103,7 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 > 7. **掃新缺姿勢**：`sort=newest`（`order=16`，實測）最新更新在前，但廣告位連排序都無視、照樣卡最前面 —— 配 `excludeFeatured=true` 才是乾淨的最新清單。另外 `employeeCount=0` 代表「未公開」（約半數公司不提供），不是 0 人。跨頁彙整請用 `jobId` 去重——最新排序是活水，新缺插入會使分頁窗口飄移，跨頁邊界可能重複。
 > 8. **公司名關鍵字不硬搜，翻譯暗號**：關鍵字被 104 判定為公司名（如「聯發科」）時，回應是 `data:[]` + `metadata.companyKeyword:true` 且**沒有 `pagination`**。本專案把這個暗號翻譯成 `companyKeyword` 結構化提示（同 `ambiguousArea` 的「錯誤即資料」），引導模型走 `find_company` → `get_company_jobs`。刻意**不用** `searchJobs=1` 硬搜：實測硬搜回 1080 筆全文模糊結果、第一筆是文曄集團（代理商）—— 靜默誤導比查無結果更糟。若 104 回了既無 `pagination` 也無 `companyKeyword` 的形狀，工具直接報錯（fail loud），不再靜默當成 0 筆。
 
-> **欄位命名跨三個工具一致**（都對照 104 原始欄位語意，避免同名不同物）：
+> **欄位命名跨工具一致**（都對照 104 原始欄位語意，避免同名不同物）：
 >
 > | 概念 | search_jobs | get_job_detail | get_company_jobs |
 > |------|:-----------:|:--------------:|:----------------:|
@@ -118,7 +119,16 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 > | 更新日期（頁面的「MM/DD更新」）| `appearDate` | `appearDate` | — |
 > | 員工人數 | `employeeCount`（數字，0=未公開） | `employees`（字串） | — |
 >
-> `jobId` 一律是 **slug**（如 `7uqyj`），不是 104 內部數字 —— slug 才能餵回 `get_job_detail`。`skills` 到哪都是「具體技術」。`appearDate` 統一為 `YYYY/MM/DD`。公司職缺**刻意不回**日期：公司 API 原始只有 `8/20` 這種無年份格式，久未更新的殭屍職缺看起來永遠像最近更新（實測有 2025 年的缺混在裡面），跨年靜默誤導 —— 想要某筆的日期，把它的 `jobId` 餵給 `get_job_detail` 拿完整的。
+> `jobId` 一律是 **slug**（如 `7uqyj`），不是 104 內部數字 —— slug 才能餵回 `get_job_detail`。公司同理：`find_company` 回的 `companyId` 是公司 slug（104 三支 API 對它的稱呼各不相同：`encodedCustNo`／`custNo`／網址尾碼，對外一律統一叫 `companyId`）。`skills` 到哪都是「具體技術」。`appearDate` 統一為 `YYYY/MM/DD`。公司職缺**刻意不回**日期：公司 API 原始只有 `8/20` 這種無年份格式，久未更新的殭屍職缺看起來永遠像最近更新（實測有 2025 年的缺混在裡面），跨年靜默誤導 —— 想要某筆的日期，把它的 `jobId` 餵給 `get_job_detail` 拿完整的。
+
+### `find_company` 參數
+
+| 參數 | 必填 | 說明 |
+|------|:----:|------|
+| `name` | ✅ | 公司名稱：全名、簡稱或英文名皆可（如 `聯發科`、`MediaTek` —— 英文別名找得到中文本尊） |
+
+> 回傳「公司名片」：`companyId`（slug，可直接餵 `get_company_jobs`）、全名、公司頁網址、產業、地區、員工數、資本額、在徵職缺數。
+> **不猜**：唯一命中或名稱完全相符才回單一 `company`；多家符合回 `candidates`（≤5 筆）＋`hint` 請模型跟使用者確認 —— 名片上的產業／在徵職缺數就是分辨「聯發科技（在徵 461）」和「全家便利商店聯發科店（在徵 1）」的依據。`total` 是 104 模糊比對的總數（含「簡介提及」的公司，會偏大）。
 
 ### `get_job_detail` 參數
 
@@ -130,19 +140,24 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 
 | 參數 | 必填 | 說明 |
 |------|:----:|------|
-| `companyUrlOrId` | ✅ | 公司網址或代碼，例如 `https://www.104.com.tw/company/1a2x6blghh` 或 `1a2x6blghh` |
-| `page` | | 第幾頁（每頁 20 筆），預設 1 |
-| `limit` | | 一般職缺的回傳筆數上限，最多 20，預設 10。**要完整翻頁請用 20**——上游每頁固定 20 筆一般職缺，較小 limit 會截掉該頁尾端。置頂職缺（`pinned=true`）只在第 1 頁回、不佔名額 |
+| `companyUrlOrId` | ✅ | 公司代碼或網址（`find_company` 的 `companyId`，或其他工具回傳的 `companyUrl`） |
+| `keyword` | | **在這家公司內搜職缺**，如 `C++`。比對職稱＋JD 內文（含「其他條件」欄）——「某公司有沒有 C++」用它，別翻頁自己過濾職稱 |
+| `page` | | 第幾頁（窗口大小＝limit 對應檔位 20/50/100），預設 1。翻頁時 limit 要維持同一個值 |
+| `limit` | | 一般職缺的回傳筆數上限，最多 100，預設 10。想一次拿完（如公司內搜 C++ 實測 98 筆）用 100；置頂職缺（`pinned=true`）另計不佔名額、只在第 1 頁回 |
 
-**三個工具怎麼串**：
+> **公司內搜尋（keyword）的眉角**（實測）：比對範圍含 JD 內文——聯發科 C++ 98 筆中，職稱含 C++ 的是 **0 筆**，靠職稱過濾會全漏。多字詞是 **OR** 不是 AND。`total` 不含置頂（465 缺 → total 462）；帶 keyword 時置頂會變 0~1 筆。
+
+**工具怎麼串**：
+- 想找「**某家公司**」的職缺 → `find_company` 拿 `companyId` → `get_company_jobs`（可帶 `keyword` 在公司內搜，如 C++）。**別把公司名丟進 `search_jobs`** —— 它會回 `companyKeyword` 提示請你走這條路。
 - `search_jobs` / `get_job_detail` 每筆都回 `url`（職缺）和 `companyUrl`（公司）兩個網址。
 - 想看某筆職缺完整內容 → 把它的 `url` 餵給 `get_job_detail`。
-- 想看「這家公司還有哪些缺」→ 把 `companyUrl` 餵給 `get_company_jobs`（它是**指定公司**的職缺列表，不是關鍵字搜尋）。
+- 想看「這家公司還有哪些缺」→ 把 `companyUrl` 餵給 `get_company_jobs`。
 
 ```
-search_jobs ─ url ──────→ get_job_detail
-      │                        │
-      └─ companyUrl ───────────┴──→ get_company_jobs
+find_company ─ companyId ──────────────┐
+search_jobs ─ url ──────→ get_job_detail  │
+      │                        │       ▼
+      └─ companyUrl ───────────┴──→ get_company_jobs（keyword＝公司內搜）
 ```
 
 ## 104 內部 API 參考
@@ -181,7 +196,8 @@ https://static.104.com.tw/category-tool/json/JobCat.json
 
 其他 endpoint：
 - 職缺詳情：`GET https://www.104.com.tw/job/ajax/content/{slug}`（Referer 指向 `/job/{slug}`）
-- 公司職缺：`GET https://www.104.com.tw/api/companies/{code}/jobs?page=1&pageSize=20`（回 `list.topJobs` + `list.normalJobs`）
+- 公司職缺：`GET https://www.104.com.tw/api/companies/{code}/jobs?page=1&pageSize=20`（回 `list.topJobs` + `list.normalJobs`；`pageSize` 只吃 20/50/100；可加 `keyword=` 在公司內搜，比對職稱＋JD 內文）
+- 公司搜尋：`GET https://www.104.com.tw/company/ajax/list?keyword=…&mode=s&page=1&pageSize=10`（Referer 指向 `/company/search/`；公司 slug 欄位叫 `encodedCustNo`；模糊比對含簡介全文）
 
 ## 檔案結構
 
@@ -201,6 +217,7 @@ src/
     searchJobs.ts     search_jobs
     getJobDetail.ts   get_job_detail
     getCompanyJobs.ts get_company_jobs
+    findCompany.ts    find_company
 scripts/
   smoke-test.mjs      手動發 JSON-RPC 驗證，不用開 Claude 也能測
 test/
