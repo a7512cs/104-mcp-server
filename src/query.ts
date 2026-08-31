@@ -124,3 +124,20 @@ export const COMPANY_PAGE_SIZES = [20, 50, 100] as const;
 export function companyPageSize(limit: number): number {
   return COMPANY_PAGE_SIZES.find((s) => s >= limit) ?? 100;
 }
+
+/**
+ * 組出公司職缺 API 網址。keyword＝公司內搜（比對職稱＋JD 內文）；
+ * pageSize 取涵蓋 limit 的檔位（見 companyPageSize）。
+ */
+export function buildCompanyJobsUrl(
+  code: string,
+  q: { keyword?: string; page?: number; limit: number },
+): string {
+  const params = new URLSearchParams({
+    page: String(q.page ?? 1),
+    pageSize: String(companyPageSize(q.limit)),
+  });
+  const kw = q.keyword?.trim();
+  if (kw) params.set("keyword", kw);
+  return `${CONFIG.companyApiBase}${code}/jobs?${params.toString()}`;
+}

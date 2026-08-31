@@ -19,6 +19,7 @@ export function registerFindCompany(server: McpServer): void {
       inputSchema: {
         name: z
           .string()
+          .trim()
           .min(1)
           .describe("公司名稱 —— 全名、常用簡稱或英文名皆可，如 '聯發科'、'台積電'、'MediaTek'"),
       },

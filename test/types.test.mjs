@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeJob, normalizeJobDetail, normalizeCompanyJob, NEGOTIABLE, buildCompanyKeywordResult, normalizeCompanyCard, pickCompany } from "../dist/types.js";
+import { normalizeJob, normalizeJobDetail, normalizeCompanyJob, NEGOTIABLE, buildCompanyKeywordResult, normalizeCompanyCard, pickCompany, interpretSearchMetadata } from "../dist/types.js";
 
 test("normalizeJob: 薪資 0/0 → 面議", () => {
   const job = normalizeJob({ salaryLow: 0, salaryHigh: 0 });
@@ -225,4 +225,41 @@ test("pickCompany: 找不到 → total=0 + hint，沒有 company/candidates", ()
   assert.equal(r.company, undefined);
   assert.equal(r.candidates, undefined);
   assert.ok(r.hint.length > 0);
+});
+
+// ── 搜尋 metadata 三路分派（審查抓到的缺口：還原舊 bug 測試曾照樣全綠） ──
+
+test("interpretSearchMetadata: 正常回應 → ok+total", () => {
+  const r = interpretSearchMetadata({ pagination: { total: 1101 } }, "聯發科");
+  assert.deepEqual(r, { kind: "ok", total: 1101 });
+});
+
+test("interpretSearchMetadata: companyKeyword 暗號 → 翻譯，不是 0 筆也不是錯誤", () => {
+  const r = interpretSearchMetadata({ companyKeyword: true }, "聯發科");
+  assert.equal(r.kind, "companyKeyword");
+});
+
+test("interpretSearchMetadata: 兩者皆無 → 出聲（fail loud），不准靜默演成「查無職缺」", () => {
+  assert.throws(() => interpretSearchMetadata({}, "x"), /分頁/);
+  assert.throws(() => interpretSearchMetadata(undefined, "x"), /分頁/);
+  assert.throws(() => interpretSearchMetadata({ pagination: {} }, "x"), /分頁/);
+});
+
+// ── pickCompany 的「不猜」不變量：從兩側防守（審查抓到的突變缺口） ──
+
+test("pickCompany: 只剩 1 張卡但 total>1 → 仍回候選，不准確信地猜", () => {
+  const r = pickCompany([card({ encodedCustNo: "z1", name: "某某科技" })], 3, "某某");
+  assert.equal(r.company, undefined);
+  assert.equal(r.candidates.length, 1);
+});
+
+test("pickCompany: 完全相符排在第 6 名也要被找到（exact 掃全部卡，不是只掃候選前 5）", () => {
+  const cards = Array.from({ length: 7 }, (_, i) => card({ encodedCustNo: `e${i}`, name: `相近公司${i}` }));
+  cards[5] = card({ encodedCustNo: "hit", name: "目標全名股份有限公司" });
+  const r = pickCompany(cards, 50, "目標全名股份有限公司");
+  assert.equal(r.company.companyId, "hit");
+});
+
+test("pickCompany: 空清單保留呼叫端給的 total（不硬編 0）", () => {
+  assert.equal(pickCompany([], 5, "x").total, 5);
 });

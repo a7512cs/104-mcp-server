@@ -11,6 +11,7 @@ import {
   SORT_CODES,
   limitJobs,
   companyPageSize,
+  buildCompanyJobsUrl,
 } from "../dist/query.js";
 
 const params = (url) => new URL(url).searchParams;
@@ -162,4 +163,29 @@ test("companyPageSize: 取涵蓋 limit 的最小檔位（20/50/100）—— limi
   assert.equal(companyPageSize(50), 50);
   assert.equal(companyPageSize(51), 100);
   assert.equal(companyPageSize(100), 100);
+});
+
+// ── 公司職缺 URL 組裝（審查抓到的缺口：刪掉 keyword 那行測試曾照樣全綠） ──
+
+test("buildCompanyJobsUrl: keyword 真的進 URL（且被 trim）—— 沒進去會把全部職缺冒充搜尋結果", () => {
+  const p = params(buildCompanyJobsUrl("12noppgo", { keyword: " C++ ", limit: 100 }));
+  assert.equal(p.get("keyword"), "C++");
+});
+
+test("buildCompanyJobsUrl: 沒給/空白 keyword → 不帶參數", () => {
+  assert.equal(params(buildCompanyJobsUrl("x", { limit: 20 })).get("keyword"), null);
+  assert.equal(params(buildCompanyJobsUrl("x", { keyword: "   ", limit: 20 })).get("keyword"), null);
+});
+
+test("buildCompanyJobsUrl: pageSize 走檔位（limit 決定）、page 預設 1", () => {
+  const p1 = params(buildCompanyJobsUrl("x", { limit: 100 }));
+  assert.equal(p1.get("pageSize"), "100"); // 改回固定 20 的話「一次拿完 98 筆」會靜默變 20 筆
+  assert.equal(p1.get("page"), "1");
+  const p2 = params(buildCompanyJobsUrl("x", { limit: 10, page: 3 }));
+  assert.equal(p2.get("pageSize"), "20");
+  assert.equal(p2.get("page"), "3");
+});
+
+test("buildCompanyJobsUrl: 網址落在 /api/companies/{code}/jobs", () => {
+  assert.ok(buildCompanyJobsUrl("12noppgo", { limit: 20 }).includes("/api/companies/12noppgo/jobs?"));
 });

@@ -302,7 +302,8 @@ export function normalizeCompanyJob(raw: RawCompanyJob): CompanyJob {
 
 /**
  * 合併置頂（topJobs）與一般（normalJobs）職缺。
- * 104 上游每頁固定回「置頂 3 筆＋一般 20 筆」，一般職缺按固定 20 筆窗口分頁；
+ * 104 上游每頁回「置頂 0~3 筆＋一般職缺一個窗口」（窗口＝pageSize 檔位 20/50/100，
+ * 見 companyPageSize；帶 keyword 時置頂會變 0~1 筆）；
  * 若讓置頂佔掉 limit 名額，每頁尾端的一般職缺會被截掉且下一頁不會補回
  * （實測聯發科 464 筆漏掉約 66 筆）。
  * 因此：limit 只約束一般職缺；置頂另計、標 pinned；置頂每頁重複回，page>1 直接略過。
@@ -331,6 +332,27 @@ export interface CompanyKeywordResult {
     readonly query: string;
     readonly hint: string;
   };
+}
+
+/**
+ * 搜尋 API metadata 的三種已知形狀 → 讀數。防腐層的一部分：
+ * - 有 pagination.total → 正常結果
+ * - companyKeyword:true → 104 判定關鍵字是公司名（不執行搜尋的暗號）
+ * - 兩者皆無 → 沒見過的形狀，出聲（曾經靜默 fallback 成 0 筆，把公司名演成「查無職缺」）
+ */
+export type SearchMetadataReading =
+  | { readonly kind: "companyKeyword" }
+  | { readonly kind: "ok"; readonly total: number };
+
+export function interpretSearchMetadata(metadata: unknown, keyword: string): SearchMetadataReading {
+  const m = metadata as
+    | { pagination?: { total?: unknown }; companyKeyword?: unknown }
+    | undefined
+    | null;
+  if (m?.companyKeyword) return { kind: "companyKeyword" };
+  const total = m?.pagination?.total;
+  if (typeof total === "number") return { kind: "ok", total };
+  throw new Error(`104 回應缺少分頁資訊（keyword="${keyword}"），可能是 104 改版或未知的轉介訊號`);
 }
 
 /** 把 104 的公司名暗號翻譯成給模型的下一步指示 */
@@ -418,7 +440,7 @@ export function pickCompany(
 ): FindCompanyResult {
   if (cards.length === 0) {
     return {
-      total: 0,
+      total, // 保留 104 回報的真實總數，不硬編 0（呼叫端負責擋「有資料但解析全失敗」的情況）
       hint: `104 找不到名稱符合「${query}」的公司。可換更完整的全名、常用簡稱，或中英文互換再試。`,
     };
   }

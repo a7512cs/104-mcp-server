@@ -14,6 +14,7 @@ import {
   normalizeCompanyJob,
   mergeCompanyJobLists,
   buildCompanyKeywordResult,
+  interpretSearchMetadata,
   normalizeCompanyCard,
   pickCompany,
   type Job,
@@ -28,7 +29,7 @@ import {
   extractCompanyCode,
   filterJobs,
   limitJobs,
-  companyPageSize,
+  buildCompanyJobsUrl,
   REMOTE_CODES,
   JOB_TYPE_CODES,
   EXPERIENCE_CODES,
@@ -104,7 +105,7 @@ export interface SearchParams {
   readonly salaryMin?: number;
   /** 排除「面議」職缺。預設 false */
   readonly excludeNegotiable?: boolean;
-  /** 排除 104 付費推廣/廣告位（jobType≠0）。預設 false */
+  /** 排除 104 廣告位（jobType=1；jobType=2 付費優先位是有效結果，不算）。預設 false */
   readonly excludeFeatured?: boolean;
   /** 職務類別名稱，例如 '軟體工程師'（會解析成官方代碼查詢） */
   readonly jobCategory?: string;
@@ -168,31 +169,23 @@ export async function searchJobs(
   log(`search: ${url}`);
 
   const body = await fetchWithRetry(url, CONFIG.referer);
-  const metadata = body.metadata as
-    | { pagination?: { total?: number }; companyKeyword?: boolean }
-    | undefined;
-  // 104 的「這是公司名」暗號：data 空、無 pagination、只有 companyKeyword:true。
-  // 翻譯給模型，不吞掉也不硬搜（帶 searchJobs=1 能壓掉暗號，但回的是全文模糊結果，
+  // 三路分派（見 interpretSearchMetadata）：正常 / 公司名暗號 / 沒見過的形狀（throw）。
+  // 暗號翻譯給模型，不吞掉也不硬搜（searchJobs=1 能壓掉暗號，但回全文模糊結果，
   // 第一筆常是代理商 —— 實測「聯發科」第一筆是文曄科技，靜默誤導比查無結果更糟）。
-  if (metadata?.companyKeyword) {
+  const reading = interpretSearchMetadata(body.metadata, keyword);
+  if (reading.kind === "companyKeyword") {
     log(`keyword "${keyword}" judged as company name by 104`);
     return buildCompanyKeywordResult(keyword);
   }
-  const pagination = metadata?.pagination;
-  // 沒有分頁資訊 = 沒見過的回應形狀（104 改版或新的轉介暗號）。寧可吵，不要騙 ——
-  // 這裡曾經靜默 fallback 成 0 筆，把「公司名關鍵字」演成「查無職缺」。
-  if (typeof pagination?.total !== "number") {
-    throw new Error(`104 回應缺少分頁資訊（keyword="${keyword}"），可能是 104 改版或未知的轉介訊號`);
-  }
   const rawJobs = Array.isArray(body.data) ? body.data : [];
-  log(`captured ${rawJobs.length} raw jobs (total=${pagination.total})`);
+  log(`captured ${rawJobs.length} raw jobs (total=${reading.total})`);
 
   // 正規化 → client 端過濾（地區 + 排除面議）
   const normalized = rawJobs.map((raw) => normalizeJob(raw as never));
   const filtered = filterJobs(normalized, { area, excludeNegotiable, excludeFeatured });
 
   return {
-    total: pagination.total,
+    total: reading.total,
     page: page ?? 1,
     // limit 只數一般職缺 —— 廣告佔名額會截掉每頁尾端（見 limitJobs）
     jobs: limitJobs(filtered, limit),
@@ -246,9 +239,7 @@ export async function getCompanyJobs(params: CompanyJobsParams): Promise<Company
 
   // pageSize 取涵蓋 limit 的最小檔位（20/50/100）：limit≤20 時跟舊行為完全一致，
   // keyword 模式常想一次拿完（實測聯發科 C++ = 98 筆，pageSize=100 一趟收工）
-  const query = new URLSearchParams({ page: String(page ?? 1), pageSize: String(companyPageSize(limit)) });
-  if (keyword?.trim()) query.set("keyword", keyword.trim());
-  const url = `${CONFIG.companyApiBase}${code}/jobs?${query.toString()}`;
+  const url = buildCompanyJobsUrl(code, { keyword, page, limit });
   const referer = `${CONFIG.companyPageBase}${code}`;
   log(`company jobs: ${url}`);
 
@@ -293,5 +284,10 @@ export async function findCompany(name: string): Promise<FindCompanyResult> {
   }
   const raw = Array.isArray(body.data) ? body.data : [];
   const cards = raw.map((r) => normalizeCompanyCard(r as never)).filter((c) => c.companyId);
+  // 有資料卻全部解析不出公司代碼 = 104 把 slug 欄位改名了（它在各 API 本來就叫法不一）。
+  // 出聲，別靜默演成「查無公司」—— 跟 search_jobs 的分頁防線同一條紀律。
+  if (raw.length > 0 && cards.length === 0) {
+    throw new Error(`104 公司搜尋回應解析失敗（${raw.length} 筆資料都缺公司代碼），可能是 104 改版`);
+  }
   return pickCompany(cards, total, queryName);
 }
