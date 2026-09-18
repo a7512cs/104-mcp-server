@@ -106,6 +106,12 @@ test("filterJobs: excludeFeatured 濾掉廣告位（featured=true）", () => {
   assert.equal(r[0].featured, false);
 });
 
+test("filterJobs: 沒給 excludeFeatured → 保留廣告位（不填 = 預設 false；evals 的 notEquals 判準靠這條約定）", () => {
+  const r = filterJobs([mk({ featured: true }), mk({ featured: false })], {});
+  assert.equal(r.length, 2);
+  assert.deepEqual(r, filterJobs([mk({ featured: true }), mk({ featured: false })], { excludeFeatured: false }));
+});
+
 test("filterJobs: 不設條件 → 回新陣列（不可變）", () => {
   const jobs = [mk({}), mk({})];
   const r = filterJobs(jobs, {});

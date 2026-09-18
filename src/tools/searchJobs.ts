@@ -37,7 +37,7 @@ export function registerSearchJobs(server: McpServer): void {
           .boolean()
           .optional()
           .describe(
-            "排除 104 付費推廣/廣告職缺（結果中 featured=true 的），預設 false。這些會被 104 硬塞在最前面、常不符合搜尋條件；想只看自然結果時設 true",
+            "排除 104 付費推廣/廣告職缺（結果中 featured=true 的），預設 false。只在使用者要求排除廣告、只看自然結果，或要 newest 排序時設 true；使用者沒提就不要填",
           ),
         jobCategory: z
           .string()
@@ -59,7 +59,7 @@ export function registerSearchJobs(server: McpServer): void {
           .enum(["newest", "salary"])
           .optional()
           .describe(
-            "排序：newest 最新更新在前（找新開職缺/掃描擴編用，建議搭配 excludeFeatured=true，否則廣告位仍會無視排序卡在最前面）/ salary 待遇由高到低。不給則用 104 預設的相關性排序",
+            "排序，只在使用者明確要求時才填：newest 最新更新在前 / salary 待遇由高到低。使用者沒提排序就不要填，104 會用預設的相關性排序。若使用者要 newest，同時設 excludeFeatured=true，否則廣告位會無視排序卡在最前面",
           ),
         page: z
           .number()
