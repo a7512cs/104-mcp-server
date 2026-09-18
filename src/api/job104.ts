@@ -17,12 +17,15 @@ import {
   interpretSearchMetadata,
   normalizeCompanyCard,
   pickCompany,
+  normalizeApplyAnalysis,
   type Job,
   type JobDetail,
   type CompanyJob,
   type CompanyKeywordResult,
   type FindCompanyResult,
+  type ApplyAnalysis,
 } from "../types.js";
+import { slugToJobNo } from "../slug.js";
 import {
   buildSearchUrl,
   extractSlug,
@@ -30,6 +33,7 @@ import {
   filterJobs,
   limitJobs,
   buildCompanyJobsUrl,
+  buildApplyAnalysisUrl,
   REMOTE_CODES,
   JOB_TYPE_CODES,
   EXPERIENCE_CODES,
@@ -290,4 +294,24 @@ export async function findCompany(name: string): Promise<FindCompanyResult> {
     throw new Error(`104 公司搜尋回應解析失敗（${raw.length} 筆資料都缺公司代碼），可能是 104 改版`);
   }
   return pickCompany(cards, total, queryName);
+}
+
+// ── 應徵分析 ──────────────────────────────────────────────────
+
+/**
+ * 取得某職缺的應徵分析：兩週內不重複應徵人數 + 應徵者組成（104 每日更新一次）。
+ * 職缺頁與搜尋列表只給區間（「11~30 人」）；這支 API 給真實數字，且不登入也回完整資料
+ * （「登入解鎖完整分析」只是前端遮罩）。job_no 要十進位，網址上的 slug 是 base36。
+ */
+export async function getApplyAnalysis(jobUrlOrSlug: string): Promise<ApplyAnalysis> {
+  const slug = extractSlug(jobUrlOrSlug);
+  if (!slug) throw new Error("無法從輸入取得職缺代碼");
+  const jobNo = slugToJobNo(slug);
+
+  const url = buildApplyAnalysisUrl(jobNo);
+  const referer = `${CONFIG.applyAnalysisPageBase}${slug}`;
+  log(`apply analysis: ${url}`);
+
+  const body = await fetchWithRetry(url, referer);
+  return normalizeApplyAnalysis(body, { jobId: slug, jobNo });
 }

@@ -16,6 +16,10 @@ export const CONFIG = {
   companySearchApiUrl: "https://www.104.com.tw/company/ajax/list",
   /** 公司搜尋的 Referer */
   companySearchReferer: "https://www.104.com.tw/company/search/",
+  /** 應徵分析 API（「應徵分析」頁自己打的；job_no 要十進位 jobNo；不登入也回完整資料，「登入解鎖」只是前端遮罩） */
+  applyAnalysisApiUrl: "https://www.104.com.tw/jb/104i/applyAnalysisToJob/all",
+  /** 應徵分析頁網址（當應徵分析請求的 Referer，slug 接在後面） */
+  applyAnalysisPageBase: "https://www.104.com.tw/jobs/apply/analysis/",
   /** 地區代碼表（樹狀 JSON，放 static.104，沒有 Cloudflare） */
   areaJsonUrl: "https://static.104.com.tw/category-tool/json/Area.json",
   /** 職類代碼表（樹狀 JSON，放 static.104，沒有 Cloudflare） */

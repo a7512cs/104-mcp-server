@@ -29,7 +29,7 @@ node evals/rescore.mjs evals/results/baseline.json
 
 | 檔 | 做什麼 |
 |---|---|
-| `golden.json` | 20 個 case：一句話 + 期望的 tool 與參數 check |
+| `golden.json` | 23 個 case：一句話 + 期望的 tool 與參數 check |
 | `run.mjs` | 逐 case 用 `claude -p --max-turns 4` 取第一個非 ToolSearch 的 tool_use，評分，寫 `results/{label}.json` |
 | `compare.mjs` | 兩份結果逐 case 比，列退步 / 進步；schemaHash、模型、golden 版本、harness 版本不同都會警告 |
 | `rescore.mjs` | 用現行 golden 重評一份既有結果（模型當時填的 toolCall 都存在結果檔裡） |
@@ -78,3 +78,6 @@ node evals/rescore.mjs evals/results/baseline.json
 | 2026-09-18 | s01-before / after-sort-fix | v2 | a3f0a8cb147a → 4378060a6414 | sonnet | 3 | S01 2/3 → 3/3 | sort/excludeFeatured 說明改為「只在使用者要求時填」 |
 | 2026-09-18 | regression-sort-fix-f03-f09 | v2 | 4378060a6414 | sonnet | 3 | 6/6 | 明確要求 newest/不要廣告的題沒被改壞 |
 | 2026-09-18 | baseline-v2-sonnet-x1 | v2 | 4378060a6414 | sonnet | 1 | 20/20 | 現行基準；v1 相比 F01/F02/F07 不再多填 sort/excludeFeatured |
+| 2026-09-18 | apply-analysis-v4-smoke | v4 | 03d6810ebd44 | sonnet | 1 | A01–A03 + D01/D02 5/5 | 新工具 get_apply_analysis 上架：明確要求 → 呼叫；搜尋時順口提競爭度（A03）→ 仍先 search_jobs，未主動呼叫；detail 路由未被改壞 |
+| 2026-09-18 | apply-range-optin-v5-smoke | v5 | 6a0fd4d7de18 | sonnet | 1 | S01/F03/A01/A03 4/4 | applyRange 改 opt-in（includeApplyRange）：一般搜尋（S01）沒開；提到競爭度（A03）有開；F03/A01 未被改壞 |
+| 2026-09-19 | （無執行） | v4 | 03d6810ebd44 | — | — | — | applyRange 改回預設一律附上、拿掉 includeApplyRange，golden 回到 v4；schema hash 與 apply-analysis-v4-smoke 完全相同，該次 5/5 直接適用，不重跑 |

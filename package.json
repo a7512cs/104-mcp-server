@@ -1,7 +1,7 @@
 {
   "name": "mcp-server-104",
   "version": "0.2.0",
-  "description": "Unofficial MCP server for 104.com.tw (Taiwan job board): search jobs, job details, company openings",
+  "description": "Unofficial MCP server for 104.com.tw (Taiwan job board): search jobs, job details, company openings, applicant analysis",
   "type": "module",
   "license": "MIT",
   "author": "a7512cs",

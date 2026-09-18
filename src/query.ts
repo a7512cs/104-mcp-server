@@ -141,3 +141,8 @@ export function buildCompanyJobsUrl(
   if (kw) params.set("keyword", kw);
   return `${CONFIG.companyApiBase}${code}/jobs?${params.toString()}`;
 }
+
+/** 組出應徵分析 API 網址 —— job_no 是十進位 jobNo（見 slugToJobNo），不是網址上的 base36 slug */
+export function buildApplyAnalysisUrl(jobNo: number): string {
+  return `${CONFIG.applyAnalysisApiUrl}?job_no=${jobNo}`;
+}

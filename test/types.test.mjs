@@ -90,9 +90,16 @@ test("normalizeJob: s10 薪資類型 —— 時薪/日薪/月薪/年薪，不再
   assert.equal(normalizeJob({ salaryLow: 0, salaryHigh: 0, s10: 10 }).salary, NEGOTIABLE); // 10 = 面議
 });
 
-test("normalizeJob: applyCount 應徵人數（判斷競爭度）", () => {
-  assert.equal(normalizeJob({ applyCnt: 12 }).applyCount, 12);
-  assert.equal(normalizeJob({}).applyCount, 0);
+test("normalizeJob: applyRange 由 analysisType 區間代碼對回職缺頁標籤（實測 1/2/3/4）；未知代碼標出來不猜；缺欄位回空", () => {
+  assert.equal(normalizeJob({ analysisType: 1 }).applyRange, "0~5 人");
+  assert.equal(normalizeJob({ analysisType: 2 }).applyRange, "6~10 人");
+  assert.equal(normalizeJob({ analysisType: 3 }).applyRange, "11~30 人");
+  assert.equal(normalizeJob({ analysisType: 4 }).applyRange, "30 人以上"); // 最高檔，實測 job/94t6r（第一版漏掉，使用者抓到）
+  assert.equal(normalizeJob({ analysisType: 7 }).applyRange, "未知區間(analysisType=7)");
+  assert.equal(normalizeJob({}).applyRange, "");
+  assert.equal(normalizeJob({ analysisType: null }).applyRange, "");
+  // 舊欄位 applyCnt 自 2026-09 起 104 一律回 0（實測 44/44 筆），不再回這個假數字誤導競爭度判斷
+  assert.ok(!("applyCount" in normalizeJob({ applyCnt: 12 })));
 });
 
 test("normalizeJob: appearDate 從 20260817 轉成 2026/08/17（跟詳情同格式）", () => {

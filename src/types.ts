@@ -16,8 +16,8 @@ export interface Job {
   readonly companyUrl: string;
   readonly area: string;
   readonly salary: string;
-  /** 應徵人數 —— 判斷這筆職缺的競爭程度 */
-  readonly applyCount: number;
+  /** 兩週內應徵人數區間（職缺頁顯示的「0~5 人」「6~10 人」「11~30 人」「30 人以上」）；空字串＝104 未提供。精確人數與應徵者組成用 get_apply_analysis */
+  readonly applyRange: string;
   /** 員工人數 —— 0 代表「未公開」（約半數公司不提供），不是 0 人。小公司/新創過濾用 */
   readonly employeeCount: number;
   /** 擅長工具/語言（具體技術，如 C++、Linux）。跨工具語意一致：詳情的 skills 也是這個 */
@@ -39,8 +39,8 @@ interface RawJob {
   salaryHigh?: number;
   /** 薪資類型：10=面議、30=時薪、40=日薪、50=月薪、60=年薪 */
   s10?: number;
-  /** 應徵人數 */
-  applyCnt?: number;
+  /** 應徵人數區間代碼（實測 1=0~5 人、2=6~10 人、3=11~30 人、4=30 人以上）。舊欄位 applyCnt 自 2026-09 起恆為 0，不再讀 */
+  analysisType?: number | null;
   /** 員工人數；約半數公司不提供（缺欄位或 0） */
   employeeCount?: number | string;
   pcSkills?: { description?: string }[];
@@ -67,6 +67,15 @@ function formatSalary(low?: number, high?: number, type?: number): string {
   if (low && hasUpper) return `${prefix} ${fmt(low)}~${fmt(high!)} 元`;
   if (low) return `${prefix} ${fmt(low)} 元以上`; // 含 low>0 且上限不設的情況
   return `${prefix} ${fmt(high!)} 元以下`;
+}
+
+/** 應徵人數區間代碼 → 職缺頁上的標籤。只列實測驗證過的（瀏覽器對照四筆職缺；4 是最高檔「30 人以上」），沒見過的代碼不猜 */
+const APPLY_RANGE_LABELS: Record<number, string> = { 1: "0~5 人", 2: "6~10 人", 3: "11~30 人", 4: "30 人以上" };
+
+/** 區間代碼 → 標籤；未知代碼標出來（不猜表、也不靜默變成空字串），缺欄位才回空 */
+function formatApplyRange(code?: number | null): string {
+  if (code == null) return "";
+  return APPLY_RANGE_LABELS[code] ?? `未知區間(analysisType=${code})`;
 }
 
 /** 搜尋 API 的日期是 8 碼數字（20260817），轉成跟詳情 API 一致的 2026/08/17；非預期格式原樣放行 */
@@ -97,7 +106,7 @@ export function normalizeJob(raw: RawJob): Job {
     companyUrl: raw.link?.cust ?? "",
     area: raw.jobAddrNoDesc ?? "",
     salary: formatSalary(raw.salaryLow, raw.salaryHigh, raw.s10),
-    applyCount: raw.applyCnt ?? 0,
+    applyRange: formatApplyRange(raw.analysisType),
     employeeCount: Number(raw.employeeCount) || 0,
     skills: (raw.pcSkills ?? []).map((s) => s.description ?? "").filter(Boolean),
     url: raw.link?.job ?? "",
@@ -458,5 +467,132 @@ export function pickCompany(
       `「${query}」符合多家公司（共 ${total} 家，含簡介提及的；此處列前 ${Math.min(cards.length, MAX_COMPANY_CANDIDATES)} 家）。` +
       `請向使用者確認是哪一家 —— 用名稱、產業、地區、在徵職缺數分辨，不要自行猜選。` +
       `確認後把該筆 companyId 餵給 get_company_jobs（可帶 keyword 在該公司內搜職缺）。`,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// 應徵分析（get_apply_analysis 用）
+// 104「應徵分析」頁背後的 API：兩週內不重複應徵人數 + 應徵者組成，每日更新一次。
+// ─────────────────────────────────────────────────────────────
+
+/** 一個分布項目：名稱、人數、百分比（0~100） */
+export interface ApplyBucket {
+  readonly name: string;
+  readonly count: number;
+  readonly percent: number;
+}
+
+/** 語言項目多一層程度分布（精通／中等／略懂…） */
+export interface ApplyLanguage extends ApplyBucket {
+  readonly levels: readonly ApplyBucket[];
+}
+
+/** 應徵分析的乾淨型別 */
+export interface ApplyAnalysis {
+  /** 職缺代碼（slug）—— 跟其他工具的 jobId 一致 */
+  readonly jobId: string;
+  /** 104 內部十進位職缺編號（應徵分析 API 用的） */
+  readonly jobNo: number;
+  /** 兩週內不重複應徵人數（真實數字，不是職缺頁的區間） */
+  readonly total: number;
+  /** 104 上次統計時間（每日更新一次） */
+  readonly updateTime: string;
+  readonly sex: readonly ApplyBucket[];
+  readonly edu: readonly ApplyBucket[];
+  /** 年齡區間（104 原始叫 yearRange） */
+  readonly age: readonly ApplyBucket[];
+  /** 年資區間 */
+  readonly exp: readonly ApplyBucket[];
+  readonly language: readonly ApplyLanguage[];
+  /** 科系 —— 只有前 10 名，count 加總不等於 total */
+  readonly major: readonly ApplyBucket[];
+  /** 技能 —— 只有前 10 名 */
+  readonly skill: readonly ApplyBucket[];
+  /** 證照 —— 只有前 10 名 */
+  readonly cert: readonly ApplyBucket[];
+}
+
+/** 原始維度：數字 key（"0","1",…）是項目，旁邊還混著 update_time / total 兩個維度層欄位 */
+type RawApplyDimension = Record<string, unknown>;
+
+/** 維度 → 原始名稱欄位（每個維度叫法不同）；對外統一成 name */
+const APPLY_DIMENSIONS = {
+  sex: "sexName",
+  edu: "eduName",
+  yearRange: "yearRangeName",
+  exp: "expName",
+  language: "langName",
+  major: "majorName",
+  skill: "skillName",
+  cert: "certName",
+} as const;
+
+const isItemKey = (key: string) => /^\d+$/.test(key);
+
+/** 取出維度底下的項目 —— 物件或陣列都吃（language.level 兩種形狀都出現過） */
+function rawApplyItems(dim: unknown): Record<string, unknown>[] {
+  if (Array.isArray(dim)) {
+    return dim.filter((v): v is Record<string, unknown> => typeof v === "object" && v !== null);
+  }
+  if (typeof dim !== "object" || dim === null) return [];
+  return Object.entries(dim)
+    .filter(([k, v]) => isItemKey(k) && typeof v === "object" && v !== null)
+    .map(([, v]) => v as Record<string, unknown>);
+}
+
+/** 原始項目 → ApplyBucket：名稱 trim（expName 有尾巴空白）、percent 字串／數字混用一律轉數字 */
+function toApplyBucket(item: Record<string, unknown>, nameField: string): ApplyBucket {
+  return {
+    name: String(item[nameField] ?? "").trim(),
+    count: Number(item.count) || 0,
+    percent: Number(item.percent) || 0,
+  };
+}
+
+/** 濾掉 0 人的項目、人數多的排前面（穩定排序：同人數保持 104 原順序） */
+function tidyBuckets<T extends ApplyBucket>(buckets: readonly T[]): T[] {
+  return buckets.filter((b) => b.count > 0).sort((a, b) => b.count - a.count);
+}
+
+/**
+ * 把 104 應徵分析原始回應轉成乾淨的 ApplyAnalysis（防腐層）。
+ * total 取 sex.total；各維度 total 應一致（實測皆相同），不一致就出聲 —— 不挑一個靜默回。
+ * 缺整個維度容忍為空陣列，只有 sex.total 是必要的。
+ */
+export function normalizeApplyAnalysis(raw: unknown, ref: { jobId: string; jobNo: number }): ApplyAnalysis {
+  const body = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, RawApplyDimension | undefined>;
+  const total = body.sex?.total;
+  if (typeof total !== "number") {
+    throw new Error(
+      `104 應徵分析回應缺少 sex.total（jobId=${ref.jobId}）—— 職缺可能不存在／已下架，或 104 改版`,
+    );
+  }
+  for (const dim of Object.keys(APPLY_DIMENSIONS)) {
+    const t = body[dim]?.total;
+    if (t !== undefined && t !== total) {
+      throw new Error(`104 應徵分析各維度 total 不一致（sex=${total}, ${dim}=${String(t)}），語意可能已改變`);
+    }
+  }
+  const buckets = (dim: keyof typeof APPLY_DIMENSIONS) =>
+    tidyBuckets(rawApplyItems(body[dim]).map((item) => toApplyBucket(item, APPLY_DIMENSIONS[dim])));
+
+  return {
+    jobId: ref.jobId,
+    jobNo: ref.jobNo,
+    total,
+    updateTime: String(body.sex?.update_time ?? ""),
+    sex: buckets("sex"),
+    edu: buckets("edu"),
+    age: buckets("yearRange"),
+    exp: buckets("exp"),
+    language: tidyBuckets(
+      rawApplyItems(body.language).map((item) => ({
+        ...toApplyBucket(item, APPLY_DIMENSIONS.language),
+        levels: tidyBuckets(rawApplyItems(item.level).map((lv) => toApplyBucket(lv, "levelName"))),
+      })),
+    ),
+    major: buckets("major"),
+    skill: buckets("skill"),
+    cert: buckets("cert"),
   };
 }

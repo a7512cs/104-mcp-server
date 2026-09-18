@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "description": "job104 MCP tool-routing golden set。每個 case = 一句使用者的話 + 「第一個 tool call 該長什麼樣」。check 型別見 evals/lib/score.mjs。v3：所有沒要求排序/廣告/面議的搜尋題，加上 sort absent、excludeFeatured notEquals true、excludeNegotiable notEquals true（規則：使用者沒說，就不改變結果）。",
+  "version": 4,
+  "description": "job104 MCP tool-routing golden set。每個 case = 一句使用者的話 + 「第一個 tool call 該長什麼樣」。check 型別見 evals/lib/score.mjs。v3：所有沒要求排序/廣告/面議的搜尋題，加上 sort absent、excludeFeatured notEquals true、excludeNegotiable notEquals true（規則：使用者沒說，就不改變結果）。v4：新增 get_apply_analysis 路由題 —— A01/A02 明確要求應徵者資料 → 呼叫；A03 搜尋時順口提到競爭度 → 第一步仍是 search_jobs（規則：不得主動呼叫應徵分析）。",
   "cases": [
     {
       "id": "S01",
@@ -490,6 +490,64 @@
           {
             "arg": "keyword",
             "contains": "Rust"
+          }
+        ]
+      }
+    },
+    {
+      "id": "A01",
+      "category": "route-apply-analysis",
+      "utterance": "給我這個職缺的應徵人的資料 https://www.104.com.tw/job/7bsyk",
+      "expect": {
+        "tool": "get_apply_analysis",
+        "args": [
+          {
+            "arg": "jobUrlOrId",
+            "contains": "7bsyk"
+          }
+        ]
+      }
+    },
+    {
+      "id": "A02",
+      "category": "route-apply-analysis",
+      "utterance": "7bsyk 這個缺目前有多少人應徵？應徵的人大概是什麼背景？",
+      "expect": {
+        "tool": "get_apply_analysis",
+        "args": [
+          {
+            "arg": "jobUrlOrId",
+            "contains": "7bsyk"
+          }
+        ]
+      }
+    },
+    {
+      "id": "A03",
+      "category": "route-apply-analysis",
+      "utterance": "幫我找台北的 Python 後端職缺，順便看看競爭激烈不激烈",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "Python"
+          },
+          {
+            "arg": "area",
+            "contains": "台北"
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
           }
         ]
       }
