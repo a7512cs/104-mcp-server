@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e 'let s=\"\";process.stdin.on(\"data\",d=>s+=d).on(\"end\",()=>{const t=JSON.parse(s).tool_name;if(t===\"ToolSearch\")process.exit(0);console.error(\"evals: \"+t+\" blocked by PreToolUse hook (routing eval records the call, never executes it)\");process.exit(2)})'"
+          }
+        ]
+      }
+    ]
+  }
+}

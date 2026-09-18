@@ -1,0 +1,498 @@
+{
+  "version": 3,
+  "description": "job104 MCP tool-routing golden set。每個 case = 一句使用者的話 + 「第一個 tool call 該長什麼樣」。check 型別見 evals/lib/score.mjs。v3：所有沒要求排序/廣告/面議的搜尋題，加上 sort absent、excludeFeatured notEquals true、excludeNegotiable notEquals true（規則：使用者沒說，就不改變結果）。",
+  "cases": [
+    {
+      "id": "S01",
+      "category": "search-basic",
+      "utterance": "幫我找新竹的 DevOps 職缺",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "DevOps"
+          },
+          {
+            "arg": "area",
+            "contains": "新竹"
+          },
+          {
+            "arg": "salaryMin",
+            "absent": true
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "S02",
+      "category": "search-basic",
+      "utterance": "台北有哪些 Rust 工程師的缺？",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "Rust"
+          },
+          {
+            "arg": "area",
+            "contains": "台北"
+          },
+          {
+            "arg": "salaryMin",
+            "absent": true
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "S03",
+      "category": "search-basic",
+      "utterance": "幫我找 Golang 的職缺",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "Go"
+          },
+          {
+            "arg": "area",
+            "absent": true
+          },
+          {
+            "arg": "salaryMin",
+            "absent": true
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "F01",
+      "category": "search-filter",
+      "utterance": "找 C++ 相關的工作，月薪至少 8 萬",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "C++"
+          },
+          {
+            "arg": "salaryMin",
+            "equals": 80000
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "F02",
+      "category": "search-filter",
+      "utterance": "找 Python 後端的缺，不要面議的",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "Python"
+          },
+          {
+            "arg": "excludeNegotiable",
+            "equals": true
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "F03",
+      "category": "search-filter",
+      "utterance": "最新刊登的 AI 工程師職缺，不要廣告",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "sort",
+            "equals": "newest"
+          },
+          {
+            "arg": "excludeFeatured",
+            "equals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "F04",
+      "category": "search-filter",
+      "utterance": "完全遠端的前端工程師職缺",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "前端"
+          },
+          {
+            "arg": "remote",
+            "equals": "full"
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "F05",
+      "category": "search-filter",
+      "utterance": "台中，需要 3 到 5 年經驗的嵌入式軟體工程師",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "area",
+            "contains": "台中"
+          },
+          {
+            "arg": "experience",
+            "equals": "3-5y"
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "F06",
+      "category": "search-filter",
+      "utterance": "有沒有兼職的資料標註工作？",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "jobType",
+            "equals": "parttime"
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "F07",
+      "category": "search-filter",
+      "utterance": "FPGA 工程師的缺，薪水高的排前面",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "FPGA"
+          },
+          {
+            "arg": "sort",
+            "equals": "salary"
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "F08",
+      "category": "search-filter",
+      "utterance": "高雄 10 年以上資歷的軟體架構師",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "area",
+            "contains": "高雄"
+          },
+          {
+            "arg": "experience",
+            "equals": "over-10y"
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "F09",
+      "category": "search-filter",
+      "utterance": "新竹 DevOps，月薪 8 萬以上、不要面議、不要廣告，最新的排前面",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "DevOps"
+          },
+          {
+            "arg": "area",
+            "contains": "新竹"
+          },
+          {
+            "arg": "salaryMin",
+            "equals": 80000
+          },
+          {
+            "arg": "excludeNegotiable",
+            "equals": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "equals": true
+          },
+          {
+            "arg": "sort",
+            "equals": "newest"
+          }
+        ]
+      }
+    },
+    {
+      "id": "F10",
+      "category": "search-filter",
+      "utterance": "部分遠端也可以的 Java 工程師，1 到 3 年經驗",
+      "expect": {
+        "tool": "search_jobs",
+        "args": [
+          {
+            "arg": "keyword",
+            "contains": "Java"
+          },
+          {
+            "arg": "remote",
+            "equals": "partial"
+          },
+          {
+            "arg": "experience",
+            "equals": "1-3y"
+          },
+          {
+            "arg": "sort",
+            "absent": true
+          },
+          {
+            "arg": "excludeFeatured",
+            "notEquals": true
+          },
+          {
+            "arg": "excludeNegotiable",
+            "notEquals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "C01",
+      "category": "route-company",
+      "utterance": "聯發科有沒有 C++ 的缺？",
+      "expect": {
+        "tool": "find_company",
+        "args": [
+          {
+            "arg": "name",
+            "contains": "聯發科"
+          }
+        ]
+      }
+    },
+    {
+      "id": "C02",
+      "category": "route-company",
+      "utterance": "台積電目前開了哪些職缺？",
+      "expect": {
+        "tool": "find_company",
+        "args": [
+          {
+            "arg": "name",
+            "contains": "台積電"
+          }
+        ]
+      }
+    },
+    {
+      "id": "C03",
+      "category": "route-company",
+      "utterance": "幫我查 MediaTek 這家公司在 104 上的資料",
+      "expect": {
+        "tool": "find_company",
+        "args": [
+          {
+            "arg": "name",
+            "contains": "MediaTek"
+          }
+        ]
+      }
+    },
+    {
+      "id": "D01",
+      "category": "route-detail",
+      "utterance": "這個職缺的完整內容給我看：https://www.104.com.tw/job/7bsyk",
+      "expect": {
+        "tool": "get_job_detail",
+        "args": [
+          {
+            "arg": "jobUrlOrId",
+            "contains": "7bsyk"
+          }
+        ]
+      }
+    },
+    {
+      "id": "D02",
+      "category": "route-detail",
+      "utterance": "職缺代碼 2zagm 的學歷和年資要求是什麼？",
+      "expect": {
+        "tool": "get_job_detail",
+        "args": [
+          {
+            "arg": "jobUrlOrId",
+            "contains": "2zagm"
+          }
+        ]
+      }
+    },
+    {
+      "id": "J01",
+      "category": "route-company-jobs",
+      "utterance": "列出 https://www.104.com.tw/company/1a2x6blghh 這家公司的所有職缺",
+      "expect": {
+        "tool": "get_company_jobs",
+        "args": [
+          {
+            "arg": "companyUrlOrId",
+            "contains": "1a2x6blghh"
+          }
+        ]
+      }
+    },
+    {
+      "id": "J02",
+      "category": "route-company-jobs",
+      "utterance": "公司代碼 12noppgo 裡面有沒有 Rust 的缺？",
+      "expect": {
+        "tool": "get_company_jobs",
+        "args": [
+          {
+            "arg": "companyUrlOrId",
+            "contains": "12noppgo"
+          },
+          {
+            "arg": "keyword",
+            "contains": "Rust"
+          }
+        ]
+      }
+    }
+  ]
+}
