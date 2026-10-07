@@ -1,0 +1,315 @@
+{
+  "analysisType": 3,
+  "response": {
+    "edu": {
+      "0": {
+        "eduName": "博碩士",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "1": {
+        "eduName": "大學",
+        "count": 0,
+        "percent": "16.67"
+      },
+      "2": {
+        "eduName": "專科",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "3": {
+        "eduName": "高中職",
+        "count": 0,
+        "percent": "16.67"
+      },
+      "4": {
+        "eduName": "國中(含)以下",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "5": {
+        "eduName": "不拘",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "6": {
+        "eduName": "無法判斷",
+        "count": 0,
+        "percent": "50.00"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "yearRange": {
+      "0": {
+        "yearRangeName": "20歲以下",
+        "count": 0,
+        "percent": "25.00"
+      },
+      "1": {
+        "yearRangeName": "21~25歲",
+        "count": 0,
+        "percent": "16.67"
+      },
+      "2": {
+        "yearRangeName": "26~30歲",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "3": {
+        "yearRangeName": "31~35歲",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "4": {
+        "yearRangeName": "36~40歲",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "5": {
+        "yearRangeName": "41~45歲",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "6": {
+        "yearRangeName": "46~50歲",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "7": {
+        "yearRangeName": "51~55歲",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "8": {
+        "yearRangeName": "56~60歲",
+        "count": 0,
+        "percent": "16.67"
+      },
+      "9": {
+        "yearRangeName": "60歲以上",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "exp": {
+      "0": {
+        "expName": "無工作經驗",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "1": {
+        "expName": "1年以下",
+        "count": 0,
+        "percent": "25.00"
+      },
+      "2": {
+        "expName": "1~3年 ",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "3": {
+        "expName": "3~5年",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "4": {
+        "expName": "5~10年",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "5": {
+        "expName": "10~15年",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "6": {
+        "expName": "15~20年",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "7": {
+        "expName": "20~25年",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "8": {
+        "expName": "25年以上",
+        "count": 0,
+        "percent": "16.67"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "language": {
+      "0": {
+        "lang_no": 19,
+        "langName": "菲律賓文",
+        "count": 0,
+        "percent": 8.33,
+        "level": {
+          "3": {
+            "level_no": 2,
+            "levelName": "精通",
+            "count": 0,
+            "percent": "8.33"
+          }
+        }
+      },
+      "1": {
+        "lang_no": 2,
+        "langName": "日文",
+        "count": 0,
+        "percent": 8.33,
+        "level": [
+          {
+            "level_no": 1,
+            "levelName": "不會",
+            "count": 0,
+            "percent": "8.33"
+          }
+        ]
+      },
+      "2": {
+        "lang_no": 18,
+        "langName": "中文",
+        "count": 0,
+        "percent": 25,
+        "level": {
+          "1": {
+            "level_no": 4,
+            "levelName": "略懂",
+            "count": 0,
+            "percent": "16.67"
+          },
+          "3": {
+            "level_no": 2,
+            "levelName": "精通",
+            "count": 0,
+            "percent": "8.33"
+          }
+        }
+      },
+      "3": {
+        "lang_no": 1,
+        "langName": "英文",
+        "count": 0,
+        "percent": 33.33,
+        "level": {
+          "0": {
+            "level_no": 1,
+            "levelName": "不會",
+            "count": 0,
+            "percent": "8.33"
+          },
+          "1": {
+            "level_no": 4,
+            "levelName": "略懂",
+            "count": 0,
+            "percent": "16.67"
+          },
+          "3": {
+            "level_no": 2,
+            "levelName": "精通",
+            "count": 0,
+            "percent": "8.33"
+          }
+        }
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "major": {
+      "0": {
+        "major": 0,
+        "majorName": "不拘",
+        "count": 0,
+        "percent": "16.67"
+      },
+      "1": {
+        "major": 3018001000,
+        "majorName": "普通科",
+        "count": 0,
+        "percent": "16.67"
+      },
+      "2": {
+        "major": 3006013000,
+        "majorName": "公共行政相關",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "3": {
+        "major": 3010001000,
+        "majorName": "電機電子維護相關",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "skill": {
+      "0": {
+        "skill": 12001001037,
+        "skillName": "Windows NT",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "1": {
+        "skill": 12001001035,
+        "skillName": "Windows 98",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "2": {
+        "skill": 12001001032,
+        "skillName": "Windows 2000",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "3": {
+        "skill": 12001010003,
+        "skillName": "中文打字50~75",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "4": {
+        "skill": 12001008003,
+        "skillName": "Excel",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "5": {
+        "skill": 12001008016,
+        "skillName": "Word",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "cert": {
+      "0": {
+        "cert": 4001005010,
+        "certName": "華語文能力測驗-口語入門基礎級",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "1": {
+        "cert": 4008001008,
+        "certName": "普通小型車駕照",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "2": {
+        "cert": 4009002005,
+        "certName": "丙級中餐(葷食)烹調技術士",
+        "count": 0,
+        "percent": "8.33"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    }
+  }
+}

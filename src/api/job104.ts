@@ -299,9 +299,24 @@ export async function findCompany(name: string): Promise<FindCompanyResult> {
 // ── 應徵分析 ──────────────────────────────────────────────────
 
 /**
+ * 職缺詳情 header 裡的應徵人數區間代碼（analysisType）—— 拿來驗證反推的人數、擋掉倍數。
+ * 抓不到不致命：回 null，反推照做只是少一道驗證。
+ */
+async function fetchApplyRangeCode(slug: string): Promise<number | null> {
+  try {
+    const body = await fetchWithRetry(`${CONFIG.jobDetailApiBase}${slug}`, `${CONFIG.jobPageBase}${slug}`);
+    const header = (body.data as { header?: { analysisType?: unknown } } | undefined)?.header;
+    return typeof header?.analysisType === "number" ? header.analysisType : null;
+  } catch (err) {
+    log(`apply range lookup failed for ${slug}:`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/**
  * 取得某職缺的應徵分析：兩週內不重複應徵人數 + 應徵者組成（104 每日更新一次）。
- * 職缺頁與搜尋列表只給區間（「11~30 人」）；這支 API 給真實數字，且不登入也回完整資料
- * （「登入解鎖完整分析」只是前端遮罩）。job_no 要十進位，網址上的 slug 是 base36。
+ * 職缺頁與搜尋列表只給區間（「11~30 人」）。2026-10-07 起這支 API 的 total/count 恆 0（登入也一樣），
+ * 只剩 percent → 確切人數由 percent 反推，再用職缺詳情的人數區間驗證。job_no 要十進位，網址上的 slug 是 base36。
  */
 export async function getApplyAnalysis(jobUrlOrSlug: string): Promise<ApplyAnalysis> {
   const slug = extractSlug(jobUrlOrSlug);
@@ -313,5 +328,6 @@ export async function getApplyAnalysis(jobUrlOrSlug: string): Promise<ApplyAnaly
   log(`apply analysis: ${url}`);
 
   const body = await fetchWithRetry(url, referer);
-  return normalizeApplyAnalysis(body, { jobId: slug, jobNo });
+  const rangeCode = await fetchApplyRangeCode(slug);
+  return normalizeApplyAnalysis(body, { jobId: slug, jobNo, rangeCode });
 }

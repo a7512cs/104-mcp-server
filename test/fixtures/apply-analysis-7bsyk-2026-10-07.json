@@ -1,0 +1,431 @@
+{
+  "analysisType": 3,
+  "response": {
+    "edu": {
+      "0": {
+        "eduName": "博碩士",
+        "count": 0,
+        "percent": "70.37"
+      },
+      "1": {
+        "eduName": "大學",
+        "count": 0,
+        "percent": "25.93"
+      },
+      "2": {
+        "eduName": "專科",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "3": {
+        "eduName": "高中職",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "4": {
+        "eduName": "國中(含)以下",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "5": {
+        "eduName": "不拘",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "6": {
+        "eduName": "無法判斷",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "yearRange": {
+      "0": {
+        "yearRangeName": "20歲以下",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "1": {
+        "yearRangeName": "21~25歲",
+        "count": 0,
+        "percent": "33.33"
+      },
+      "2": {
+        "yearRangeName": "26~30歲",
+        "count": 0,
+        "percent": "33.33"
+      },
+      "3": {
+        "yearRangeName": "31~35歲",
+        "count": 0,
+        "percent": "14.81"
+      },
+      "4": {
+        "yearRangeName": "36~40歲",
+        "count": 0,
+        "percent": "11.11"
+      },
+      "5": {
+        "yearRangeName": "41~45歲",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "6": {
+        "yearRangeName": "46~50歲",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "7": {
+        "yearRangeName": "51~55歲",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "8": {
+        "yearRangeName": "56~60歲",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "9": {
+        "yearRangeName": "60歲以上",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "exp": {
+      "0": {
+        "expName": "無工作經驗",
+        "count": 0,
+        "percent": "25.93"
+      },
+      "1": {
+        "expName": "1年以下",
+        "count": 0,
+        "percent": "14.81"
+      },
+      "2": {
+        "expName": "1~3年 ",
+        "count": 0,
+        "percent": "18.52"
+      },
+      "3": {
+        "expName": "3~5年",
+        "count": 0,
+        "percent": "14.81"
+      },
+      "4": {
+        "expName": "5~10年",
+        "count": 0,
+        "percent": "14.81"
+      },
+      "5": {
+        "expName": "10~15年",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "6": {
+        "expName": "15~20年",
+        "count": 0,
+        "percent": "7.41"
+      },
+      "7": {
+        "expName": "20~25年",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "8": {
+        "expName": "25年以上",
+        "count": 0,
+        "percent": "0.00"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "language": {
+      "0": {
+        "lang_no": 1,
+        "langName": "英文",
+        "count": 0,
+        "percent": 81.47999999999999,
+        "level": {
+          "1": {
+            "level_no": 4,
+            "levelName": "略懂",
+            "count": 0,
+            "percent": "11.11"
+          },
+          "2": {
+            "level_no": 8,
+            "levelName": "中等",
+            "count": 0,
+            "percent": "44.44"
+          },
+          "3": {
+            "level_no": 2,
+            "levelName": "精通",
+            "count": 0,
+            "percent": "25.93"
+          }
+        }
+      },
+      "1": {
+        "lang_no": 19,
+        "langName": "菲律賓文",
+        "count": 0,
+        "percent": 3.7,
+        "level": {
+          "3": {
+            "level_no": 2,
+            "levelName": "精通",
+            "count": 0,
+            "percent": "3.70"
+          }
+        }
+      },
+      "2": {
+        "lang_no": 2,
+        "langName": "日文",
+        "count": 0,
+        "percent": 11.11,
+        "level": {
+          "1": {
+            "level_no": 4,
+            "levelName": "略懂",
+            "count": 0,
+            "percent": "3.70"
+          },
+          "2": {
+            "level_no": 8,
+            "levelName": "中等",
+            "count": 0,
+            "percent": "7.41"
+          }
+        }
+      },
+      "3": {
+        "lang_no": 4,
+        "langName": "德文",
+        "count": 0,
+        "percent": 3.7,
+        "level": {
+          "1": {
+            "level_no": 4,
+            "levelName": "略懂",
+            "count": 0,
+            "percent": "3.70"
+          }
+        }
+      },
+      "4": {
+        "lang_no": 18,
+        "langName": "中文",
+        "count": 0,
+        "percent": 22.21,
+        "level": {
+          "0": {
+            "level_no": 1,
+            "levelName": "不會",
+            "count": 0,
+            "percent": "3.70"
+          },
+          "1": {
+            "level_no": 4,
+            "levelName": "略懂",
+            "count": 0,
+            "percent": "3.70"
+          },
+          "3": {
+            "level_no": 2,
+            "levelName": "精通",
+            "count": 0,
+            "percent": "14.81"
+          }
+        }
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "major": {
+      "0": {
+        "major": 3008004000,
+        "majorName": "資訊工程相關",
+        "count": 0,
+        "percent": "51.85"
+      },
+      "1": {
+        "major": 3011008000,
+        "majorName": "電機電子工程相關",
+        "count": 0,
+        "percent": "14.81"
+      },
+      "2": {
+        "major": 0,
+        "majorName": "不拘",
+        "count": 0,
+        "percent": "7.41"
+      },
+      "3": {
+        "major": 3006005000,
+        "majorName": "資訊管理相關",
+        "count": 0,
+        "percent": "7.41"
+      },
+      "4": {
+        "major": 3006007000,
+        "majorName": "工業管理相關",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "5": {
+        "major": 3006009000,
+        "majorName": "市場行銷相關",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "6": {
+        "major": 3010003000,
+        "majorName": "機械維護相關",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "7": {
+        "major": 3011001000,
+        "majorName": "測量工程相關",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "skill": {
+      "0": {
+        "skill": 12001003045,
+        "skillName": "Python",
+        "count": 0,
+        "percent": "51.85"
+      },
+      "1": {
+        "skill": 12001003097,
+        "skillName": "LLM",
+        "count": 0,
+        "percent": "22.22"
+      },
+      "2": {
+        "skill": 12001006017,
+        "skillName": "JavaScript",
+        "count": 0,
+        "percent": "29.63"
+      },
+      "3": {
+        "skill": 12001002018,
+        "skillName": "Git",
+        "count": 0,
+        "percent": "25.93"
+      },
+      "4": {
+        "skill": 12001001020,
+        "skillName": "Shell",
+        "count": 0,
+        "percent": "14.81"
+      },
+      "5": {
+        "skill": 12001001007,
+        "skillName": "Linux",
+        "count": 0,
+        "percent": "25.93"
+      },
+      "6": {
+        "skill": 12001006036,
+        "skillName": "ReactJS",
+        "count": 0,
+        "percent": "14.81"
+      },
+      "7": {
+        "skill": 12001004039,
+        "skillName": "PostgreSQL",
+        "count": 0,
+        "percent": "14.81"
+      },
+      "8": {
+        "skill": 12001003009,
+        "skillName": "C#",
+        "count": 0,
+        "percent": "18.52"
+      },
+      "9": {
+        "skill": 12001003086,
+        "skillName": "PyTorch",
+        "count": 0,
+        "percent": "14.81"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    },
+    "cert": {
+      "0": {
+        "cert": 4001001005,
+        "certName": "TOEIC (多益測驗)",
+        "count": 0,
+        "percent": "37.04"
+      },
+      "1": {
+        "cert": 4004001009,
+        "certName": "乙級數位電子技術士",
+        "count": 0,
+        "percent": "7.41"
+      },
+      "2": {
+        "cert": 4001001002,
+        "certName": "TOEFL",
+        "count": 0,
+        "percent": "7.41"
+      },
+      "3": {
+        "cert": 4001002003,
+        "certName": "JLPT N2",
+        "count": 0,
+        "percent": "7.41"
+      },
+      "4": {
+        "cert": 4001001012,
+        "certName": "GEPT全民英檢中級",
+        "count": 0,
+        "percent": "7.41"
+      },
+      "5": {
+        "cert": 4004001048,
+        "certName": "AMA先進微控制器應用認證",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "6": {
+        "cert": 4002047004,
+        "certName": "AWS認證的解決方案架構師-助理級認證",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "7": {
+        "cert": 4005002005,
+        "certName": "乙級測量技術士",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "8": {
+        "cert": 4020004004,
+        "certName": "中等學校教師證",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "9": {
+        "cert": 4002005013,
+        "certName": "ITS Python 程式語言核心能力",
+        "count": 0,
+        "percent": "3.70"
+      },
+      "update_time": "2026-10-07 03:20:51",
+      "total": 0
+    }
+  }
+}

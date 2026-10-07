@@ -6,6 +6,7 @@
  */
 import { extractSlug } from "./slug.js";
 import { CONFIG } from "./config.js";
+import { inferTotalCandidates, type TotalBounds } from "./applicants.js";
 
 export interface Job {
   /** 職缺代碼（slug，如 7uqyj）—— 可直接餵給 get_job_detail。三個工具語意一致 */
@@ -71,6 +72,14 @@ function formatSalary(low?: number, high?: number, type?: number): string {
 
 /** 應徵人數區間代碼 → 職缺頁上的標籤。只列實測驗證過的（瀏覽器對照四筆職缺；4 是最高檔「30 人以上」），沒見過的代碼不猜 */
 const APPLY_RANGE_LABELS: Record<number, string> = { 1: "0~5 人", 2: "6~10 人", 3: "11~30 人", 4: "30 人以上" };
+
+/** 區間代碼 → 人數上下限（給應徵分析反推人數時擋掉倍數用）。30 同時落在 3 和 4 兩檔，104 標籤本身就重疊 */
+const APPLY_RANGE_BOUNDS: Record<number, TotalBounds> = {
+  1: { min: 0, max: 5 },
+  2: { min: 6, max: 10 },
+  3: { min: 11, max: 30 },
+  4: { min: 30, max: Infinity },
+};
 
 /** 區間代碼 → 標籤；未知代碼標出來（不猜表、也不靜默變成空字串），缺欄位才回空 */
 function formatApplyRange(code?: number | null): string {
@@ -473,12 +482,14 @@ export function pickCompany(
 // ─────────────────────────────────────────────────────────────
 // 應徵分析（get_apply_analysis 用）
 // 104「應徵分析」頁背後的 API：兩週內不重複應徵人數 + 應徵者組成，每日更新一次。
+// ⚠️ 2026-10-07 起 total / count 恆 0、sex 維度消失（登入也一樣），只剩 percent →
+//    確切人數改由 percent 反推（見 applicants.ts），count 再用反推的人數乘回來。
 // ─────────────────────────────────────────────────────────────
 
-/** 一個分布項目：名稱、人數、百分比（0~100） */
+/** 一個分布項目：名稱、人數、百分比（0~100）。count=null 代表人數推不出來，只有 percent 可信 */
 export interface ApplyBucket {
   readonly name: string;
-  readonly count: number;
+  readonly count: number | null;
   readonly percent: number;
 }
 
@@ -487,17 +498,29 @@ export interface ApplyLanguage extends ApplyBucket {
   readonly levels: readonly ApplyBucket[];
 }
 
+/**
+ * total 的來源：
+ * - api：104 回了真實 total（10/07 前的行為；若 104 恢復就自動走這條）
+ * - inferred：從 percent 反推（且落在 104 人數區間內）
+ * - unknown：推不出來（percent 互相矛盾，或跟區間對不上）—— total=null，不猜
+ */
+export type ApplyTotalBasis = "api" | "inferred" | "unknown";
+
 /** 應徵分析的乾淨型別 */
 export interface ApplyAnalysis {
   /** 職缺代碼（slug）—— 跟其他工具的 jobId 一致 */
   readonly jobId: string;
   /** 104 內部十進位職缺編號（應徵分析 API 用的） */
   readonly jobNo: number;
-  /** 兩週內不重複應徵人數（真實數字，不是職缺頁的區間） */
-  readonly total: number;
+  /** 兩週內不重複應徵人數。basis=inferred 時是反推值（最小候選）；unknown 時為 null */
+  readonly total: number | null;
+  readonly totalBasis: ApplyTotalBasis;
+  /** 所有符合的人數候選（由小到大）。多於一個代表倍數擋不掉（多半是「30 人以上」），total 取最小的 */
+  readonly totalCandidates: readonly number[];
+  /** 104 職缺頁顯示的人數區間（「6~10 人」）；空字串＝沒拿到 */
+  readonly applyRange: string;
   /** 104 上次統計時間（每日更新一次） */
   readonly updateTime: string;
-  readonly sex: readonly ApplyBucket[];
   readonly edu: readonly ApplyBucket[];
   /** 年齡區間（104 原始叫 yearRange） */
   readonly age: readonly ApplyBucket[];
@@ -515,9 +538,8 @@ export interface ApplyAnalysis {
 /** 原始維度：數字 key（"0","1",…）是項目，旁邊還混著 update_time / total 兩個維度層欄位 */
 type RawApplyDimension = Record<string, unknown>;
 
-/** 維度 → 原始名稱欄位（每個維度叫法不同）；對外統一成 name */
+/** 維度 → 原始名稱欄位（每個維度叫法不同）；對外統一成 name。sex 自 10/07 起整個消失，不再讀 */
 const APPLY_DIMENSIONS = {
-  sex: "sexName",
   edu: "eduName",
   yearRange: "yearRangeName",
   exp: "expName",
@@ -526,6 +548,9 @@ const APPLY_DIMENSIONS = {
   skill: "skillName",
   cert: "certName",
 } as const;
+
+type ApplyDimensionKey = keyof typeof APPLY_DIMENSIONS;
+type RawApplyBody = Record<string, RawApplyDimension | undefined>;
 
 const isItemKey = (key: string) => /^\d+$/.test(key);
 
@@ -540,55 +565,100 @@ function rawApplyItems(dim: unknown): Record<string, unknown>[] {
     .map(([, v]) => v as Record<string, unknown>);
 }
 
-/** 原始項目 → ApplyBucket：名稱 trim（expName 有尾巴空白）、percent 字串／數字混用一律轉數字 */
-function toApplyBucket(item: Record<string, unknown>, nameField: string): ApplyBucket {
-  return {
-    name: String(item[nameField] ?? "").trim(),
-    count: Number(item.count) || 0,
-    percent: Number(item.percent) || 0,
-  };
+/** percent 字串／數字混用一律轉數字 */
+const toPercent = (item: Record<string, unknown>) => Number(item.percent) || 0;
+
+/** 0% 的項目濾掉、比例高的排前面（穩定排序：同比例保持 104 原順序） */
+function tidyBuckets<T extends { readonly percent: number }>(buckets: readonly T[]): T[] {
+  return buckets.filter((b) => b.percent > 0).sort((a, b) => b.percent - a.percent);
 }
 
-/** 濾掉 0 人的項目、人數多的排前面（穩定排序：同人數保持 104 原順序） */
-function tidyBuckets<T extends ApplyBucket>(buckets: readonly T[]): T[] {
-  return buckets.filter((b) => b.count > 0).sort((a, b) => b.count - a.count);
+/** 各維度的 total 應一致（9/18 實測皆相同、10/07 起皆為 0），不一致就出聲 —— 不挑一個靜默回 */
+function readApiTotal(body: RawApplyBody, jobId: string): number {
+  const present = (Object.keys(APPLY_DIMENSIONS) as ApplyDimensionKey[]).filter((d) => body[d] !== undefined);
+  if (present.length === 0) {
+    throw new Error(`104 應徵分析回應沒有任何維度（jobId=${jobId}）—— 職缺可能不存在／已下架，或 104 改版`);
+  }
+  const first = body[present[0]]?.total;
+  for (const dim of present) {
+    const t = body[dim]?.total;
+    if (t !== undefined && t !== first) {
+      throw new Error(`104 應徵分析各維度 total 不一致（${present[0]}=${String(first)}, ${dim}=${String(t)}），語意可能已改變`);
+    }
+  }
+  return typeof first === "number" ? first : 0;
+}
+
+/** 反推用的 percent：每個項目＋語言程度。語言第一層是「各程度四捨五入後再加總」（22.21 = 3.70+14.81+3.70），會跟真值差 0.01，排除 */
+function percentsForInference(body: RawApplyBody): number[] {
+  return (Object.keys(APPLY_DIMENSIONS) as ApplyDimensionKey[]).flatMap((dim) =>
+    rawApplyItems(body[dim]).flatMap((item) =>
+      dim === "language" ? rawApplyItems(item.level).map(toPercent) : [toPercent(item)],
+    ),
+  );
+}
+
+interface ResolvedTotal {
+  readonly total: number | null;
+  readonly basis: ApplyTotalBasis;
+  readonly candidates: readonly number[];
+}
+
+/** 決定 total：API 有真值就用；沒有就從 percent 反推，並用 104 人數區間擋倍數、驗證結果 */
+function resolveApplyTotal(body: RawApplyBody, apiTotal: number, rangeCode?: number | null): ResolvedTotal {
+  if (apiTotal > 0) return { total: apiTotal, basis: "api", candidates: [apiTotal] };
+
+  const bounds = rangeCode == null ? undefined : APPLY_RANGE_BOUNDS[rangeCode];
+  const percents = percentsForInference(body).filter((p) => p > 0);
+  if (percents.length === 0) {
+    // 沒有任何比例：區間允許 0 人才回 0；區間說有人卻全是 0% → 資料被遮了，不猜
+    const allowsZero = !bounds || bounds.min === 0;
+    return allowsZero ? { total: 0, basis: "inferred", candidates: [0] } : { total: null, basis: "unknown", candidates: [] };
+  }
+  const candidates = inferTotalCandidates(percents, bounds);
+  if (candidates.length === 0) return { total: null, basis: "unknown", candidates: [] };
+  return { total: candidates[0], basis: "inferred", candidates };
 }
 
 /**
  * 把 104 應徵分析原始回應轉成乾淨的 ApplyAnalysis（防腐層）。
- * total 取 sex.total；各維度 total 應一致（實測皆相同），不一致就出聲 —— 不挑一個靜默回。
- * 缺整個維度容忍為空陣列，只有 sex.total 是必要的。
+ * rangeCode 是職缺詳情的 header.analysisType（人數區間代碼），用來驗證反推結果；拿不到就只靠 percent。
+ * 缺整個維度容忍為空陣列；一個維度都沒有才出聲。
  */
-export function normalizeApplyAnalysis(raw: unknown, ref: { jobId: string; jobNo: number }): ApplyAnalysis {
-  const body = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, RawApplyDimension | undefined>;
-  const total = body.sex?.total;
-  if (typeof total !== "number") {
-    throw new Error(
-      `104 應徵分析回應缺少 sex.total（jobId=${ref.jobId}）—— 職缺可能不存在／已下架，或 104 改版`,
-    );
-  }
-  for (const dim of Object.keys(APPLY_DIMENSIONS)) {
-    const t = body[dim]?.total;
-    if (t !== undefined && t !== total) {
-      throw new Error(`104 應徵分析各維度 total 不一致（sex=${total}, ${dim}=${String(t)}），語意可能已改變`);
-    }
-  }
-  const buckets = (dim: keyof typeof APPLY_DIMENSIONS) =>
-    tidyBuckets(rawApplyItems(body[dim]).map((item) => toApplyBucket(item, APPLY_DIMENSIONS[dim])));
+export function normalizeApplyAnalysis(
+  raw: unknown,
+  ref: { jobId: string; jobNo: number; rangeCode?: number | null },
+): ApplyAnalysis {
+  const body = (typeof raw === "object" && raw !== null ? raw : {}) as RawApplyBody;
+  const apiTotal = readApiTotal(body, ref.jobId);
+  const { total, basis, candidates } = resolveApplyTotal(body, apiTotal, ref.rangeCode);
+
+  // API 有真實 count 就用；反推模式用 total 乘回來；推不出來就 null（只給 percent）
+  const toBucket = (item: Record<string, unknown>, nameField: string): ApplyBucket => {
+    const percent = toPercent(item);
+    const count =
+      basis === "api" ? Number(item.count) || 0 : total === null ? null : Math.round((percent * total) / 100);
+    return { name: String(item[nameField] ?? "").trim(), count, percent }; // expName 有尾巴空白
+  };
+  const buckets = (dim: ApplyDimensionKey) =>
+    tidyBuckets(rawApplyItems(body[dim]).map((item) => toBucket(item, APPLY_DIMENSIONS[dim])));
+  const firstDim = (Object.keys(APPLY_DIMENSIONS) as ApplyDimensionKey[]).find((d) => body[d] !== undefined);
 
   return {
     jobId: ref.jobId,
     jobNo: ref.jobNo,
     total,
-    updateTime: String(body.sex?.update_time ?? ""),
-    sex: buckets("sex"),
+    totalBasis: basis,
+    totalCandidates: candidates,
+    applyRange: formatApplyRange(ref.rangeCode),
+    updateTime: String((firstDim && body[firstDim]?.update_time) ?? ""),
     edu: buckets("edu"),
     age: buckets("yearRange"),
     exp: buckets("exp"),
     language: tidyBuckets(
       rawApplyItems(body.language).map((item) => ({
-        ...toApplyBucket(item, APPLY_DIMENSIONS.language),
-        levels: tidyBuckets(rawApplyItems(item.level).map((lv) => toApplyBucket(lv, "levelName"))),
+        ...toBucket(item, APPLY_DIMENSIONS.language),
+        levels: tidyBuckets(rawApplyItems(item.level).map((lv) => toBucket(lv, "levelName"))),
       })),
     ),
     major: buckets("major"),
