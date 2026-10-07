@@ -10,6 +10,35 @@
 | 想寫個一次性爬蟲抓資料 | Playwright / cycletls 腳本就好，不用 MCP |
 | 不想自己寫腳本，要讓 Claude 直接幫你分析/比對/彙整/自動化職缺 | **這個 MCP** |
 
+## 特點
+
+- **不用開瀏覽器、不用登入**：純 HTTP 直接拿 104 的即時資料，比 Playwright 輕一個量級
+- **Claude 讀完整 JD 再幫你挑**：不只看職稱 —— 一句話講條件，Claude 自己搜尋、讀完每份 JD，分好層、附上理由
+- **確切應徵人數**：104 網站只給區間（「6~10 人」），這裡給確切人數（「8 人」）
+- **應徵者背景分布**：學歷、年資，還有年齡、科系、技能、證照、語言 —— 知道你在跟誰競爭
+- **公司內搜尋會比對 JD 內文**：聯發科 C++ 的缺有 105 筆，職稱寫 C++ 的是 0 筆，只看職稱會全部漏掉
+- **有歧義先問，不亂猜**：公司同名（「聯發科」連便利商店都會跑出來）、地區同名（「信義區」有台北和基隆）
+- **自動標記 104 廣告**：104 會在結果裡塞跟關鍵字無關的廣告，可以一鍵排除；也能依更新時間掃新缺
+- **安裝簡單**：Claude Code、Codex 一行指令；Claude Desktop、Cursor 貼一段設定
+
+## 效果
+
+**一句話找職缺**：Claude 自己串工具、讀完 45 份 JD，分層推薦並附理由
+
+> 因為是示意，只抓搜尋結果最前面的 45 筆職缺來分析（實際符合的有上千筆）。真的在找工作時，可以請 Claude 多翻幾頁、讀更多 JD。
+
+![一句話找職缺：搜尋、讀 JD、分 Tier](docs/images/demo-search.png)
+
+**接著問競爭狀況**：確切應徵人數，加上學歷、年資分布
+
+![應徵分析：確切人數、學歷分布、年資分布](docs/images/demo-apply-analysis.png)
+
+**更多用法**
+
+![更多範例：公司內搜尋、歧義先問、掃新缺](docs/images/demo-more.png)
+
+> 圖中資料都是 2026-10-07 實際執行的結果；職缺會變動，你跑的時候結果會不一樣。
+
 ## 安裝
 
 以下三種**擇一**，看你用什麼 client：
@@ -75,7 +104,7 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 | `find_company` | ✅ 真實資料 | 用公司名稱找公司，回名片（companyId、產業、員工數、在徵職缺數）；同名多家回候選不猜 |
 | `get_job_detail` | ✅ 真實資料 | 取得單筆職缺完整詳情：完整 JD、薪資、地點、學經歷要求、技能、語言能力、福利、產業別 |
 | `get_company_jobs` | ✅ 真實資料 | 列出某公司所有在徵職缺（分頁） |
-| `get_apply_analysis` | ✅ 真實資料 | 單筆職缺的應徵者分析：兩週內不重複應徵人數（真實數字）＋性別／學歷／年齡／年資／語言／科系／技能／證照分布。**只在你明確要求時才會被呼叫** |
+| `get_apply_analysis` | ✅ 真實資料 | 單筆職缺的應徵者分析：兩週內不重複應徵人數（確切人數，104 網站只給區間）＋學歷／年齡／年資／語言／科系／技能／證照分布。**只在你明確要求時才會被呼叫** |
 
 ### `search_jobs` 參數
 
@@ -103,7 +132,8 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 > 6. **廣告偵測**：104 會在結果最前面塞廣告（原始欄位 `jobType=1`），它會**無視關鍵字**（例如護理師搜尋跑出「COACH 精品銷售」）。每筆回傳 `featured` 旗標標記它，`excludeFeatured=true` 可整批濾掉。廣告是**額外疊加**在每頁 20 筆一般職缺之上（實測原始一頁可達 22 筆），limit 只數一般職缺、廣告不佔名額。`jobType=2`（付費優先位）仍符合關鍵字，視為有效結果不標記。搜尋列表刻意不含完整 JD（精簡、避免模型整理清單時把某筆網址對錯到別筆），完整內容用 `get_job_detail`。
 > 7. **掃新缺姿勢**：`sort=newest`（`order=16`，實測）最新更新在前，但廣告位連排序都無視、照樣卡最前面 —— 配 `excludeFeatured=true` 才是乾淨的最新清單。另外 `employeeCount=0` 代表「未公開」（約半數公司不提供），不是 0 人。跨頁彙整請用 `jobId` 去重——最新排序是活水，新缺插入會使分頁窗口飄移，跨頁邊界可能重複。
 > 8. **公司名關鍵字不硬搜，翻譯暗號**：關鍵字被 104 判定為公司名（如「聯發科」）時，回應是 `data:[]` + `metadata.companyKeyword:true` 且**沒有 `pagination`**。本專案把這個暗號翻譯成 `companyKeyword` 結構化提示（同 `ambiguousArea` 的「錯誤即資料」），引導模型走 `find_company` → `get_company_jobs`。刻意**不用** `searchJobs=1` 硬搜：實測硬搜回 1080 筆全文模糊結果、第一筆是文曄集團（代理商）—— 靜默誤導比查無結果更糟。若 104 回了既無 `pagination` 也無 `companyKeyword` 的形狀，工具直接報錯（fail loud），不再靜默當成 0 筆。
-> 9. **應徵人數：列表只有區間，真實數字在另一支 API**：搜尋 API 的 `applyCnt` 自 2026-09 起一律回 `0`（實測 44/44 筆），舊版 `applyCount` 因此恆為 0、看起來像「沒人應徵」—— 已改成 `applyRange`，由每筆的 `analysisType` 區間代碼對回職缺頁標籤（實測 `1`=0~5 人、`2`=6~10 人、`3`=11~30 人、`4`=30 人以上；沒驗證過的代碼回「未知區間(analysisType=N)」，不猜表）。要**真實不重複人數**與應徵者組成用 `get_apply_analysis`：它打「應徵分析」頁背後的 API，不登入也回完整資料（「登入解鎖完整分析」只是前端遮罩），104 每日統計一次。
+> 9. **應徵人數：列表只有區間，確切人數用 `get_apply_analysis`**：搜尋 API 的 `applyCnt` 自 2026-09 起一律回 `0`（實測 44/44 筆），舊版 `applyCount` 因此恆為 0、看起來像「沒人應徵」—— 已改成 `applyRange`，由每筆的 `analysisType` 區間代碼對回職缺頁標籤（實測 `1`=0~5 人、`2`=6~10 人、`3`=11~30 人、`4`=30 人以上；沒驗證過的代碼回「未知區間(analysisType=N)」，不猜表）。要**確切不重複人數**與應徵者組成用 `get_apply_analysis`：它打「應徵分析」頁背後的 API，104 每日統計一次（見眉角 10）。
+> 10. **應徵分析的人數是反推的**：2026-10-07 起這支 API 的 `total` 和每項 `count` 一律回 `0`、`sex` 維度整個消失 —— **登入也一樣**（登入只解鎖頁面上被遮住的分布，人數照樣只給區間）。但 `percent` 還保留兩位小數，等於 `round(count / total × 100, 2)`：找出讓每個 `percent` 都是某個 `k/N` 四捨五入結果的 `N`，就是應徵人數。實測 9/18 快照（當時還回 `total=24`）只用 `percent` 推回來正好是 24。眉角：① `N` 成立時 `2N`、`3N` 也一定成立，所以再拿職缺詳情 `header.analysisType` 的人數區間擋倍數、驗證結果，對不上就回 `totalBasis: "unknown"`、不猜；②「30 人以上」沒有上限擋不掉倍數，回最小值並列出 `totalCandidates`；③ `language` 第一層的 `percent` 是各程度**四捨五入後再加總**（`22.21 = 3.70+14.81+3.70`，真值 6/27 是 22.22），拿來反推會推不出來，只用各程度的值。
 
 > **欄位命名跨工具一致**（都對照 104 原始欄位語意，避免同名不同物）：
 >
@@ -146,9 +176,9 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 | `companyUrlOrId` | ✅ | 公司代碼或網址（`find_company` 的 `companyId`，或其他工具回傳的 `companyUrl`） |
 | `keyword` | | **在這家公司內搜職缺**，如 `C++`。比對職稱＋JD 內文（含「其他條件」欄）——「某公司有沒有 C++」用它，別翻頁自己過濾職稱 |
 | `page` | | 第幾頁（窗口大小＝limit 所在檔位 20/50/100），預設 1 |
-| `limit` | | 一般職缺的回傳筆數上限，最多 100，預設 10。想一次拿完（如公司內搜 C++ 實測 98 筆）用 100；**要完整翻頁，limit 請用檔位值 20/50/100 本身且中途不換**——其他值會截掉每個窗口的尾端、下一頁不補回。置頂職缺（`pinned=true`）另計不佔名額、只在第 1 頁回 |
+| `limit` | | 一般職缺的回傳筆數上限，最多 100，預設 10。想一次拿完（如聯發科公司內搜 C++，2026-10-07 實測 105 筆）用 100；**要完整翻頁，limit 請用檔位值 20/50/100 本身且中途不換**——其他值會截掉每個窗口的尾端、下一頁不補回。置頂職缺（`pinned=true`）另計不佔名額、只在第 1 頁回 |
 
-> **公司內搜尋（keyword）的眉角**（實測）：比對範圍含 JD 內文——聯發科 C++ 98 筆中，職稱含 C++ 的是 **0 筆**，靠職稱過濾會全漏。多字詞是 **OR** 不是 AND。`total` 不含置頂（465 缺 → total 462）；帶 keyword 時置頂會變 0~1 筆。
+> **公司內搜尋（keyword）的眉角**（實測）：比對範圍含 JD 內文——聯發科 C++ 105 筆中（2026-10-07 實測），職稱含 C++ 的是 **0 筆**，靠職稱過濾會全漏。多字詞是 **OR** 不是 AND。`total` 不含置頂（465 缺 → total 462）；帶 keyword 時置頂會變 0~1 筆。
 
 ### `get_apply_analysis` 參數
 
@@ -156,7 +186,7 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 |------|:----:|------|
 | `jobUrlOrId` | ✅ | 職缺網址或代碼（跟 `get_job_detail` 相同），例如 `https://www.104.com.tw/job/7bsyk` 或 `7bsyk` |
 
-> 回傳：`total`（兩週內**不重複**應徵人數，真實數字）、`updateTime`（104 每日統計一次）、以及 `sex` / `edu` / `age` / `exp` / `language`（含 `levels` 程度）/ `major` / `skill` / `cert` 分布，每項 `{ name, count, percent }`，0 人的項目已濾掉、人數多的排前面。`major` / `skill` / `cert` 只有**前 10 名**，加總不等於 `total`。
+> 回傳：`total`（兩週內**不重複**應徵人數）、`totalBasis`（`api`＝104 直接給 / `inferred`＝由比例反推並經區間驗證 / `unknown`＝推不出來，`total` 與各項 `count` 為 `null`）、`totalCandidates`（所有符合的人數，多於一個時 `total` 取最小）、`applyRange`（104 的人數區間，拿來驗證）、`updateTime`（104 每日統計一次）、以及 `edu` / `age` / `exp` / `language`（含 `levels` 程度）/ `major` / `skill` / `cert` 分布，每項 `{ name, count, percent }`，0% 的項目已濾掉、比例高的排前面。`major` / `skill` / `cert` 只有**前 10 名**，加總不等於 `total`。104 已不提供性別。
 > **使用規矩**：這支只在你**明確要求**「這個職缺的應徵者／應徵人數／競爭狀況」時才會被呼叫 —— 搜尋、看詳情、列公司職缺時不會順便呼叫，也不會為了比較競爭度批次呼叫（規矩寫在工具說明裡給模型看）。
 
 **工具怎麼串**：
@@ -164,7 +194,7 @@ claude mcp add job104 -- node /你的路徑/104-mcp-server/dist/index.js
 - `search_jobs` / `get_job_detail` 每筆都回 `url`（職缺）和 `companyUrl`（公司）兩個網址。
 - 想看某筆職缺完整內容 → 把它的 `url` 餵給 `get_job_detail`。
 - 想看「這家公司還有哪些缺」→ 把 `companyUrl` 餵給 `get_company_jobs`。
-- 想知道某筆職缺的**競爭狀況**（真實應徵人數、應徵者背景）→ 把 `url` 或 `jobId` 餵給 `get_apply_analysis` —— 只在你明確開口要時。
+- 想知道某筆職缺的**競爭狀況**（確切應徵人數、應徵者背景）→ 把 `url` 或 `jobId` 餵給 `get_apply_analysis` —— 只在你明確開口要時。
 
 ```
 find_company ─ companyId ──────────────┐
@@ -211,7 +241,7 @@ https://static.104.com.tw/category-tool/json/JobCat.json
 - 職缺詳情：`GET https://www.104.com.tw/job/ajax/content/{slug}`（Referer 指向 `/job/{slug}`）
 - 公司職缺：`GET https://www.104.com.tw/api/companies/{code}/jobs?page=1&pageSize=20`（回 `list.topJobs` + `list.normalJobs`；`pageSize` 只吃 20/50/100；可加 `keyword=` 在公司內搜，比對職稱＋JD 內文）
 - 公司搜尋：`GET https://www.104.com.tw/company/ajax/list?keyword=…&mode=s&page=1&pageSize=10`（Referer 指向 `/company/search/`；公司 slug 欄位叫 `encodedCustNo`；模糊比對含簡介全文）
-- 應徵分析：`GET https://www.104.com.tw/jb/104i/applyAnalysisToJob/all?job_no={十進位 jobNo}`（Referer 指向 `/jobs/apply/analysis/{slug}`；`jobNo = parseInt(slug, 36)`，網址上的 slug 是 base36；不登入也回完整資料；每個維度底下是「數字字串 key 的物件」不是陣列，旁邊混著 `update_time` / `total`；`percent` 字串／數字混用；`language[].level` 有時物件有時陣列）
+- 應徵分析：`GET https://www.104.com.tw/jb/104i/applyAnalysisToJob/all?job_no={十進位 jobNo}`（Referer 指向 `/jobs/apply/analysis/{slug}`；`jobNo = parseInt(slug, 36)`，網址上的 slug 是 base36；2026-10-07 起 `total` / `count` 恆 0、沒有 `sex`（登入也一樣），只剩 `percent`；每個維度底下是「數字字串 key 的物件」不是陣列，旁邊混著 `update_time` / `total`；`percent` 字串／數字混用；`language[].level` 有時物件有時陣列）
 
 ## 檔案結構
 
@@ -220,6 +250,7 @@ src/
   index.ts            進入點：建 server、掛 tool、接 stdio、處理關閉
   config.ts           所有設定 / 魔術數字（JA3 指紋、endpoint、節流區間…）
   types.ts            乾淨型別 + normalizeJob / JobDetail / CompanyJob（防腐層）
+  applicants.ts       純函式：從應徵分析的 percent 反推確切應徵人數
   query.ts            純函式：組查詢網址、client 端過濾、enum 對照
   slug.ts             從 104 網址取出職缺 slug / 公司碼（types/query 共用）
   codes.ts            地區/職類「名稱→官方代碼」解析（樹狀比對+剪枝，快取代碼表）
@@ -240,7 +271,9 @@ test/
   query.test.mjs      組網址 / slug / 公司碼 / 過濾 / enum 對照
   codes.test.mjs      代碼表樹狀比對 + 剪枝
   merge.test.mjs      公司職缺置頂／一般合併（置頂不佔 limit 名額）
-  apply-analysis.test.mjs  slug→jobNo、應徵分析網址、normalizeApplyAnalysis（形狀陷阱）
+  apply-analysis.test.mjs  slug→jobNo、應徵分析網址、normalizeApplyAnalysis（形狀陷阱、10/07 真實回應反推）
+  applicants.test.mjs      反推人數（9/18 黃金案例、倍數、四捨五入邊界）
+  fixtures/                104 真實回應快照（測試用）
   evals-score.test.mjs     evals 純評分函式
 ```
 
@@ -255,7 +288,7 @@ npm run inspect               # 開 MCP Inspector GUI 除錯
 
 改完 code 要 `npm run build`，然後重啟 Claude Code（或用 `/mcp` reconnect）才會生效 —— client 只在 session 啟動時抓一次工具清單。
 
-**測試策略**：純邏輯（normalize、組網址、過濾）都抽到 `types.ts` / `query.ts`，用 Node 內建 `node --test` 測，快又不用連網 —— 改壞馬上知道。碰網路的部分（`job104.ts` / `httpClient.ts`）用 smoke-test 對真實 104 驗證。
+**測試策略**：純邏輯（normalize、組網址、過濾、反推應徵人數）都抽到 `types.ts` / `query.ts` / `applicants.ts`，用 Node 內建 `node --test` 測，快又不用連網 —— 改壞馬上知道。碰網路的部分（`job104.ts` / `httpClient.ts`）用 smoke-test 對真實 104 驗證。
 
 ## ⚠️ 免責聲明
 
